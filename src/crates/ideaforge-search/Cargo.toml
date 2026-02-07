@@ -1,0 +1,13 @@
+[package]
+name = "ideaforge-search"
+description = "Full-text search for IdeaForge using Tantivy"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+ideaforge-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

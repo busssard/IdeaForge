@@ -1,0 +1,16 @@
+[package]
+name = "ideaforge-auth"
+description = "Authentication and authorization for IdeaForge (JWT, OAuth2, API keys)"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+ideaforge-core = { workspace = true }
+jsonwebtoken = { workspace = true }
+argon2 = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

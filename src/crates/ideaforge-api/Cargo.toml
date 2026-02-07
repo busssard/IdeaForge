@@ -1,0 +1,28 @@
+[package]
+name = "ideaforge-api"
+description = "Axum HTTP API server for IdeaForge"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "ideaforge"
+path = "src/main.rs"
+
+[dependencies]
+ideaforge-core = { workspace = true }
+ideaforge-db = { workspace = true }
+ideaforge-auth = { workspace = true }
+ideaforge-search = { workspace = true }
+ideaforge-blockchain = { workspace = true }
+ideaforge-events = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }

@@ -1,0 +1,15 @@
+[package]
+name = "ideaforge-events"
+description = "Event publishing and subscribing for IdeaForge (NATS-backed)"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+ideaforge-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
