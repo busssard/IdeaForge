@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, Query},
-    routing::{get, post, put, delete},
+    routing::{get, put, delete},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -14,16 +14,10 @@ pub fn routes() -> Router<AppState> {
         .route("/", get(list_ideas).post(create_idea))
         .route("/{id}", get(get_idea).put(update_idea).delete(archive_idea))
         .route("/{id}/maturity", put(update_maturity))
-        // Human approvals (drive maturity advancement)
-        .route("/{id}/approvals", get(list_approvals).post(approve_idea).delete(withdraw_approval))
-        // AI endorsements (informational only, separate track)
-        .route("/{id}/endorsements", get(list_endorsements).post(endorse_idea).delete(withdraw_endorsement))
-        // Combined approval summary
-        .route("/{id}/approval-summary", get(get_approval_summary))
+        // Human Stokes (drive maturity advancement)
+        .route("/{id}/stokes", get(list_stokes).post(stoke_idea).delete(withdraw_stoke))
+        // Contributions (comments and suggestions)
         .route("/{id}/contributions", get(list_contributions).post(add_contribution))
-        .route("/{id}/todos", get(list_todos).post(create_todo))
-        .route("/{id}/pledges", get(list_pledges).post(create_pledge))
-        .route("/{id}/applications", get(list_applications).post(apply_as_expert))
 }
 
 #[derive(Debug, Deserialize)]
@@ -45,8 +39,7 @@ pub struct IdeaResponse {
     pub summary: String,
     pub maturity: IdeaMaturity,
     pub openness: IdeaOpenness,
-    pub human_approvals: i32,
-    pub ai_endorsements: i32,
+    pub stoke_count: i32,
 }
 
 async fn list_ideas(Query(_params): Query<ListIdeasQuery>) -> &'static str {
@@ -65,7 +58,7 @@ async fn get_idea(Path(_id): Path<Uuid>) -> &'static str {
 }
 
 async fn update_idea(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: Implement idea update (author or admin)
+    // TODO: Implement idea update (author only)
     "update idea"
 }
 
@@ -75,50 +68,27 @@ async fn archive_idea(Path(_id): Path<Uuid>) -> &'static str {
 }
 
 async fn update_maturity(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: Implement maturity state transition
-    // Transition validation uses human_approvals only (via TransitionRequirements)
+    // TODO: Implement maturity state transition (Spark -> Building -> InWork)
+    // Transition validation uses stoke_count (human Stokes only)
     "update maturity"
 }
 
-// --- Human approvals (drive maturity advancement) ---
+// --- Human Stokes (drive maturity advancement) ---
 
-async fn list_approvals(Path(_id): Path<Uuid>) -> &'static str {
-    "list human approvals"
+async fn list_stokes(Path(_id): Path<Uuid>) -> &'static str {
+    "list stokes"
 }
 
-async fn approve_idea(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: Reject with 403 if caller is an AI agent (is_bot = true)
-    "approve idea (human only)"
+async fn stoke_idea(Path(_id): Path<Uuid>) -> &'static str {
+    // TODO: Create a Stoke for this idea (one per user per idea)
+    "stoke idea"
 }
 
-async fn withdraw_approval(Path(_id): Path<Uuid>) -> &'static str {
-    "withdraw human approval"
+async fn withdraw_stoke(Path(_id): Path<Uuid>) -> &'static str {
+    "withdraw stoke"
 }
 
-// --- AI endorsements (informational only, separate track) ---
-
-async fn list_endorsements(Path(_id): Path<Uuid>) -> &'static str {
-    "list AI endorsements"
-}
-
-async fn endorse_idea(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: Reject with 403 if caller is a human (is_bot = false)
-    // Requires confidence score and reasoning
-    "endorse idea (AI agent only)"
-}
-
-async fn withdraw_endorsement(Path(_id): Path<Uuid>) -> &'static str {
-    "withdraw AI endorsement"
-}
-
-// --- Combined approval summary ---
-
-async fn get_approval_summary(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: Return ApprovalSummary with human_approvals + ai_endorsements
-    "approval summary"
-}
-
-// --- Contributions, Todos, Pledges, Applications ---
+// --- Contributions ---
 
 async fn list_contributions(Path(_id): Path<Uuid>) -> &'static str {
     "list contributions"
@@ -126,28 +96,4 @@ async fn list_contributions(Path(_id): Path<Uuid>) -> &'static str {
 
 async fn add_contribution(Path(_id): Path<Uuid>) -> &'static str {
     "add contribution"
-}
-
-async fn list_todos(Path(_id): Path<Uuid>) -> &'static str {
-    "list todos"
-}
-
-async fn create_todo(Path(_id): Path<Uuid>) -> &'static str {
-    "create todo"
-}
-
-async fn list_pledges(Path(_id): Path<Uuid>) -> &'static str {
-    "list pledges"
-}
-
-async fn create_pledge(Path(_id): Path<Uuid>) -> &'static str {
-    "create pledge"
-}
-
-async fn list_applications(Path(_id): Path<Uuid>) -> &'static str {
-    "list applications"
-}
-
-async fn apply_as_expert(Path(_id): Path<Uuid>) -> &'static str {
-    "apply as expert"
 }

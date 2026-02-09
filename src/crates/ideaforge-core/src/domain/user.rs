@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// A platform user (human or bot).
+/// A platform user. MVP is human-only (no bot accounts).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
     pub id: Uuid,
@@ -10,77 +10,62 @@ pub struct User {
     pub display_name: String,
     pub bio: String,
     pub avatar_url: Option<String>,
-    pub wallet_address: Option<String>,
-    pub is_bot: bool,
-    pub bot_owner_id: Option<Uuid>,
-    pub onboarding_role: OnboardingRole,
+    pub role: UserRole,
     pub email_verified: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
-/// The role a user selects during onboarding. Controls progressive UI disclosure.
+/// MVP roles: 3 (simplified from 8).
+///
+/// - **Entrepreneur**: Creates ideas, manages task boards, leads teams.
+/// - **Maker**: Applies to join teams, claims tasks, builds.
+/// - **Curious**: Browses, Stokes ideas, comments.
+///
+/// Full role system (Investor, Consumer, Freelancer, AI Agent) is
+/// defined in the long-term architecture and restored in Phase 2+.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum OnboardingRole {
+pub enum UserRole {
     Entrepreneur,
-    Investor,
     Maker,
-    Freelancer,
-    AiAgent,
-    Consumer,
     Curious,
 }
 
-impl Default for OnboardingRole {
+impl Default for UserRole {
     fn default() -> Self {
         Self::Curious
     }
 }
 
-impl OnboardingRole {
-    /// Returns the disclosure tier for this role, controlling which UI features
-    /// are shown by default. Aligned with the UX Philosophy progressive disclosure matrix.
-    pub fn disclosure_tier(&self) -> DisclosureTier {
+impl UserRole {
+    /// Returns the default permissions for this role.
+    pub fn default_permissions(&self) -> &'static [&'static str] {
         match self {
-            Self::Curious | Self::Consumer => DisclosureTier::T1,
-            Self::Maker | Self::Freelancer | Self::AiAgent => DisclosureTier::T2,
-            Self::Entrepreneur | Self::Investor => DisclosureTier::T3,
+            Self::Entrepreneur => &[
+                "ideas.create",
+                "ideas.update_own",
+                "ideas.delete_own",
+                "ideas.set_maturity",
+                "stokes.create",
+                "contributions.create",
+                "board.create",
+                "board.manage_own",
+                "team.manage_own",
+            ],
+            Self::Maker => &[
+                "ideas.create",
+                "stokes.create",
+                "contributions.create",
+                "team.apply",
+                "board.tasks.claim",
+            ],
+            Self::Curious => &[
+                "stokes.create",
+                "contributions.create",
+            ],
         }
     }
-}
-
-/// Progressive disclosure tiers control which features are shown in the UI.
-/// This is a UX concern, not a permission gate -- users can always access
-/// additional features by changing their role in settings.
-///
-/// Aligned with the Creative Mind's UX Philosophy document.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum DisclosureTier {
-    /// Browse, vote, comment -- minimal UI complexity
-    T1,
-    /// + Create ideas, apply to tasks, expert profiles
-    T2,
-    /// + Pledges, IP protection, financial features, AI agent management
-    T3,
-}
-
-impl DisclosureTier {
-    /// Check whether a feature at the given tier should be visible for this user tier.
-    pub fn can_see(&self, feature_tier: &DisclosureTier) -> bool {
-        self >= feature_tier
-    }
-}
-
-/// Expert roles that users can apply for on specific ideas.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ExpertRole {
-    Maker,
-    Programmer,
-    Designer,
-    Scientist,
 }
 
 /// Platform permissions following the `domain.action` pattern.

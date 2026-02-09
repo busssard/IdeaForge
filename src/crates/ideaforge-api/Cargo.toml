@@ -9,18 +9,28 @@ name = "ideaforge"
 path = "src/main.rs"
 
 [dependencies]
+# MVP crates
 ideaforge-core = { workspace = true }
 ideaforge-db = { workspace = true }
 ideaforge-auth = { workspace = true }
 ideaforge-search = { workspace = true }
-ideaforge-blockchain = { workspace = true }
-ideaforge-events = { workspace = true }
+
+# Deferred crates (Phase 2+) -- NOT dependencies of the API at MVP
+# ideaforge-blockchain = { workspace = true }  # Phase 2-3: Cardano pledges
+# ideaforge-events = { workspace = true }      # Phase 2+: NATS event bus
+# ideaforge-payments = { workspace = true }    # Phase 2: Stripe
+
+# Web framework
 axum = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true }
 tokio = { workspace = true }
+
+# Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+# Common
 uuid = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }

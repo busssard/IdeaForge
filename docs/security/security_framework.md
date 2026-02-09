@@ -1,470 +1,269 @@
-# IdeaForge Security Framework
+# IdeaForge Security Framework (MVP)
 
 ## Executive Summary
 
-IdeaForge handles sensitive intellectual property, financial transactions (fiat and crypto), and personal data across multiple user roles. This document defines the security architecture, covering OWASP Top 10 mitigation, authentication/authorization, encryption, smart contract security, and infrastructure protection.
+The MVP has a radically simplified security posture. There are no secret ideas, no financial transactions, no smart contracts, no crypto wallets, and no AI agent API. The attack surface is a standard web application with user accounts, public content, and social features (posting, commenting, voting).
+
+**MVP security scope**: Basic JWT authentication, password hashing, HTTPS, input validation, rate limiting. That is it.
+
+Everything else (MFA, HSM/KMS, per-idea encryption, smart contract security, KYC/AML, ABAC, mTLS) is deferred to post-PMF phases when the features that require them are built.
 
 ---
 
-## 1. OWASP Top 10:2025 Mitigation
+## 1. What the MVP Does NOT Have (Deferred Security)
 
-The OWASP Top 10:2025 is the latest industry standard for web application security risks. Each risk is addressed with IdeaForge-specific mitigations.
+These features and their associated security infrastructure are explicitly deferred:
 
-### A01:2025 -- Broken Access Control
+| Deferred Feature | Associated Security | When to Add |
+|-----------------|--------------------|----|
+| Secret/IP-protected ideas | Per-idea AES-256-GCM encryption, KMS, HSM, ABAC, NDA-gated access | Phase 2 (if validated) |
+| Financial transactions | PCI DSS, escrow, smart contract audits, KYC/AML | Phase 3 |
+| Smart contracts (Cardano) | Formal verification, external audits, testnet deployment | Phase 3 |
+| Multi-factor authentication | TOTP, MFA step-up for sensitive actions | Phase 2 |
+| AI agent API | Bot registration, API key management, HMAC-SHA256 | Phase 3 |
+| Crypto wallet auth | Cardano wallet challenge-response | Phase 3 |
+| mTLS service-to-service | Certificate management, mutual TLS | Phase 2+ |
+| WAF / DDoS protection | Cloud WAF, DDoS mitigation | When traffic justifies it |
+| SOC 2 / GDPR compliance | DPO, DPIA, audit trails | Pre-Series A |
+| Bug bounty program | HackerOne/Immunefi setup | Post-launch, when attack surface grows |
 
-**Risk**: Unauthorized access to secret ideas, other users' financial data, admin functions, or cross-role privilege escalation.
-
-**Mitigations**:
-- Role-based access control (RBAC) with the seven platform roles as base roles
-- Idea-level access control lists (ACLs) enforced server-side
-  - Open ideas: readable by all
-  - Commercial ideas: readable by all, contribution terms enforced
-  - Secret ideas: readable only by NDA-signed, approved users
-- API authorization checks on every endpoint (no client-side-only enforcement)
-- Deny-by-default policy: new endpoints require explicit authorization rules
-- Automated access control testing in CI/CD pipeline
-- Session-based and token-based access with short-lived JWTs (15-minute expiry, rotating refresh tokens)
-- Admin actions require multi-factor authentication (MFA) and are audit-logged
-
-### A02:2025 -- Security Misconfiguration
-
-**Risk**: Default credentials, unnecessary services, overly permissive CORS, exposed debug endpoints.
-
-**Mitigations**:
-- Infrastructure-as-Code (IaC) with security baselines (Terraform/Pulumi)
-- Automated security scanning in CI/CD (SAST, DAST, container scanning)
-- No default credentials in any environment (secrets injected at runtime)
-- Minimal container images (distroless/Alpine-based)
-- HTTP security headers enforced: CSP, X-Frame-Options, X-Content-Type-Options, HSTS
-- CORS restricted to platform domains only
-- Debug/diagnostic endpoints disabled in production
-- Regular configuration audits (quarterly)
-
-### A03:2025 -- Software Supply Chain Failures
-
-**Risk**: Compromised dependencies, malicious packages, tampered build artifacts.
-
-**Mitigations**:
-- Dependency lock files committed to version control (package-lock.json, poetry.lock)
-- Automated vulnerability scanning (Dependabot, Snyk, or Grype)
-- Software Bill of Materials (SBOM) generated for every release
-- Signed container images and build artifacts
-- Minimal dependency policy: evaluate necessity before adding any package
-- Pin dependency versions; no floating version ranges in production
-- Private artifact registry with vulnerability scanning
-
-### A04:2025 -- Cryptographic Failures
-
-**Risk**: Exposure of passwords, payment data, secret idea content, API keys.
-
-**Mitigations**:
-- Passwords hashed with Argon2id (memory-hard, not bcrypt)
-- TLS 1.3 enforced for all connections (TLS 1.2 minimum)
-- AES-256-GCM for data at rest encryption
-- No custom cryptography -- use well-audited libraries only
-- API keys and secrets stored in vault (HashiCorp Vault or AWS Secrets Manager)
-- Automatic secret rotation (90-day maximum lifetime)
-- No sensitive data in URLs, logs, or error messages
-- PCI DSS compliance for fiat payment handling (via Stripe tokenization)
-
-### A05:2025 -- Injection
-
-**Risk**: SQL injection, NoSQL injection, OS command injection, LDAP injection.
-
-**Mitigations**:
-- Parameterized queries / prepared statements exclusively (no string concatenation)
-- ORM usage with query builder (SQLAlchemy, Prisma, or similar)
-- Input validation on all user-facing fields (allowlist approach)
-- Content Security Policy (CSP) to prevent XSS
-- Output encoding for all user-generated content
-- Server-side markdown rendering with sanitization (no raw HTML)
-- Regular penetration testing focusing on injection vectors
-
-### A06:2025 -- Insecure Design
-
-**Risk**: Architectural flaws that cannot be fixed by implementation alone.
-
-**Mitigations**:
-- Threat modeling for each major feature before development (STRIDE)
-- Abuse case documentation alongside use cases
-- Security architecture review for:
-  - Secret idea access flow
-  - Smart contract funding flow
-  - AI agent registration and interaction flow
-  - Cross-role privilege transitions
-- Rate limiting as an architectural requirement (not an afterthought)
-- Defense in depth: multiple security layers, no single point of failure
-
-### A07:2025 -- Authentication Failures
-
-**Risk**: Credential stuffing, brute force, session hijacking, weak passwords.
-
-**Mitigations**:
-- Multi-factor authentication (MFA) required for:
-  - Investors (mandatory for financial transactions)
-  - Entrepreneurs with secret ideas (mandatory)
-  - All users (optional but encouraged)
-- Password requirements: minimum 12 characters, checked against breached password databases (HaveIBeenPwned API)
-- Account lockout after 5 failed attempts (progressive delays, not permanent lockout)
-- Session management:
-  - HTTP-only, Secure, SameSite=Strict cookies
-  - Session invalidation on password change
-  - Concurrent session limits (max 5 active sessions)
-- OAuth 2.0 / OIDC for social login (Google, GitHub, Cardano wallet)
-- API authentication via short-lived Bearer tokens with scoped permissions
-
-### A08:2025 -- Software or Data Integrity Failures
-
-**Risk**: Deserialization attacks, CI/CD pipeline compromise, unsigned updates.
-
-**Mitigations**:
-- Signed and verified deployments (GPG-signed commits, verified container images)
-- CI/CD pipeline hardened with least-privilege service accounts
-- Immutable infrastructure (containers rebuilt, not patched in place)
-- Integrity checks on all downloaded dependencies and artifacts
-- Webhook verification for all external integrations (signature validation)
-
-### A09:2025 -- Security Logging & Alerting Failures
-
-**Risk**: Attacks go undetected due to insufficient logging or monitoring.
-
-**Mitigations**:
-- Structured logging (JSON format) with correlation IDs
-- Security-relevant events logged:
-  - Authentication successes and failures
-  - Authorization failures
-  - Secret idea access attempts
-  - Financial transactions
-  - Admin actions
-  - API rate limit hits
-  - Bot activity patterns
-- Log aggregation with alerting (ELK/Loki + Grafana or equivalent)
-- Real-time alerting for:
-  - Brute force detection (> 10 failed logins from same IP/account)
-  - Unusual secret idea access patterns
-  - Smart contract anomalies
-  - Bot registration spikes
-- Log retention: 90 days hot, 1 year cold, 7 years for financial records
-- Logs encrypted at rest; access to logs requires elevated permissions
-
-### A10:2025 -- Mishandling of Exceptional Conditions
-
-**Risk**: Unhandled errors revealing system internals, failing open instead of closed.
-
-**Mitigations**:
-- Global error handler that returns generic messages to users
-- No stack traces, internal paths, or database errors in production responses
-- Fail-closed design: if authorization check fails or is unavailable, deny access
-- Circuit breaker pattern for external service calls (Cardano node, payment processor)
-- Graceful degradation: if smart contract service is unavailable, queue transactions, do not skip verification
-- Dead letter queues for failed financial transactions with alerting
+**Rationale**: Security should be proportional to what you are protecting. The MVP protects user accounts and public idea content. It does not handle money, secrets, or regulated data. Over-engineering security at MVP delays launch and burns runway on infrastructure no one uses yet.
 
 ---
 
-## 2. Authentication & Authorization Architecture
+## 2. MVP Authentication
 
-### 2.1 Authentication Flow
+### 2.1 Authentication Methods
+
+**Supported at MVP**:
+1. **Email + password** (primary)
+2. **OAuth 2.0 social login** (Google, GitHub) via OIDC
+
+**Deferred**:
+- Cardano wallet authentication
+- AI agent API key authentication
+- MFA / TOTP
+
+### 2.2 Password Handling
+
+- Passwords hashed with **Argon2id** (memory-hard, resistant to GPU attacks)
+- Minimum password length: 10 characters
+- No maximum length restriction (up to reasonable limit, e.g., 128 chars)
+- Checked against HaveIBeenPwned breached password API on registration
+- Account lockout after 5 failed login attempts (15-minute progressive delay)
+
+### 2.3 JWT Token Flow
 
 ```
-User
-  |
-  v
-[Login Page / API]
-  |
-  +-- Email/Password --> Argon2id verification --> MFA challenge (if enabled)
-  |
-  +-- OAuth 2.0 (Google, GitHub) --> OIDC token verification
-  |
-  +-- Cardano Wallet --> Challenge-response signature verification
-  |
-  +-- AI Agent API Key --> HMAC-SHA256 signature verification
-  |
-  v
-[JWT Issued]
-  |
-  +-- Access Token (15 min, contains: user_id, role, permissions)
-  +-- Refresh Token (7 days, stored server-side, rotated on use)
+User logs in (email/password or OAuth)
+        |
+        v
+Server verifies credentials
+        |
+        v
+JWT Access Token issued
+  - Expiry: 15 minutes
+  - Payload: user_id, role, issued_at
+  - Signed with HS256 or RS256
+        |
+        v
+Refresh Token issued
+  - Expiry: 7 days
+  - Stored server-side (database)
+  - Rotated on each use (old token invalidated)
+  - HTTP-only, Secure, SameSite=Strict cookie
 ```
 
-### 2.2 Authorization Model
+### 2.4 Session Security
 
-#### Role-Based Access Control (RBAC)
-
-```
-Roles:        Curious < Consumer < Maker/Freelancer < Entrepreneur < Investor < Admin
-                                                    AI-Agent (parallel track)
-```
-
-#### Permissions Matrix
-
-| Action | Curious | Consumer | Maker | Freelancer | Entrepreneur | Investor | AI-Agent | Admin |
-|--------|---------|----------|-------|------------|--------------|----------|----------|-------|
-| Browse open ideas | Y | Y | Y | Y | Y | Y | Y | Y |
-| Vote on ideas | Y | Y | Y | Y | Y | Y | N* | Y |
-| Comment | Y | Y | Y | Y | Y | Y | Y** | Y |
-| Pledge/pre-buy | N | Y | Y | Y | Y | Y | N | Y |
-| Create ideas | N | N | Y | N | Y | N | Y** | Y |
-| Apply to tasks | N | N | Y | Y | N | N | Y** | Y |
-| Fund ideas | N | N | N | N | N | Y | N | Y |
-| Access secret ideas | N | N | NDA*** | NDA*** | Own | NDA*** | N | Y |
-| Register as expert | N | N | Y | Y | N | N | N | Y |
-| Admin functions | N | N | N | N | N | N | N | Y |
-
-\* AI-Agents cannot vote (prevents manipulation); they can endorse via separate mechanism
-\** AI-Agent contributions always labeled as AI-generated
-\*** NDA required; access granted per-idea by entrepreneur
-
-#### Attribute-Based Access Control (ABAC) for Secret Ideas
-
-Secret ideas use fine-grained ABAC:
-- `idea.openness_level == "secret"` AND `user.has_signed_nda(idea.id)` AND `idea.owner.approved(user.id)`
-- Access logged and auditable
-- Time-limited access windows (renewable)
-- Watermarked content delivery for leak detection
-
-### 2.3 API Security
-
-**Architecture alignment note**: The architect has designed the API as RESTful JSON via Axum (not GraphQL), with `/api/v1/` prefix. Bot authentication uses `X-Api-Key` header resolved to a user context with `is_bot: true`. Rate limiting is implemented via Tower middleware with Redis-backed sliding window counters.
-
-- All API endpoints require authentication (except public idea listings)
-- Rate limiting per user, per IP, and per API key (implemented via `tower` middleware + Redis)
-- Bot API keys: long-lived, stored hashed in database (`bot_api_key_hash` field)
-- API versioning via URL prefix (`/api/v1/`)
-- Pagination enforced on all list endpoints (cursor-based for real-time feeds)
-- WebSocket connections authenticated via JWT token in query parameter (`/ws?token={jwt}`)
-
-### 2.4 Architecture Security Alignment & Gaps
-
-Cross-referencing with the software architecture (`docs/architecture/`), the following alignment and gap analysis applies:
-
-**Aligned**:
-- JWT with 15-min access tokens + 7-day refresh tokens (architecture matches security spec)
-- Argon2 for password hashing (confirmed in ADR-008)
-- Bot/human distinction via `is_bot` boolean and `bot_owner_id` foreign key in users table
-- Separate `human_approvals` and `bot_approvals` counters denormalized on ideas table
-- Rate limits differentiated for human vs. bot traffic
-
-**Gaps resolved in Cross-Review Round 2** (architect has updated `docs/architecture/`):
-
-1. **Secret idea isolation**: **Resolved.** The architect has added a `secret_ideas` schema (`docs/architecture/database_schema.md` Section 5b) with `secret_ideas.idea_content` (encrypted BYTEA), `secret_ideas.access_grants` (NDA tracking with expiry), and `secret_ideas.access_log` (audit trail). Access routed through a dedicated Secret Idea Access Proxy with mTLS. This matches our security recommendation precisely.
-2. **Per-idea encryption**: **Resolved.** The `secret_ideas.idea_content` table stores `encrypted_content` (BYTEA, AES-256-GCM) with `encryption_key_id` referencing per-idea DEKs in KMS. The architect's system overview diagram now shows the isolated Secret Ideas Zone with HSM-backed KMS keys.
-3. **KMS integration**: **Resolved.** The architecture now references HSM-backed KMS (AWS KMS or HashiCorp Vault) for master keys wrapping per-idea DEKs. The `CLAUDE.md` project file confirms: "Secret ideas use per-idea AES-256-GCM encryption with HSM-backed KMS."
-4. **MFA**: **Partially resolved.** The `CLAUDE.md` references `ideaforge-auth` crate with "JWT, OAuth2, Argon2 password hashing, MFA (TOTP)". The auth crate exists in the workspace structure but MFA flow details are not yet in the API design doc. **Remaining gap**: The API design (`docs/architecture/api_design.md`) should specify MFA endpoints (`/api/v1/auth/mfa/setup`, `/api/v1/auth/mfa/verify`) and which actions require MFA step-up (secret idea access, financial transactions, admin actions).
-5. **Audit logging**: **Partially resolved.** The architect added `secret_ideas.access_log` for secret idea access tracking. The maturity state machine logs transitions in `idea_events`. **Remaining gap**: A unified security audit log covering auth failures, admin actions, API rate limit hits, and bot activity anomalies should be specified. Recommend a dedicated `security_audit_log` table or integration with an external SIEM (ELK/Loki) for centralized security event correlation.
+- Access tokens: short-lived (15 min), stored in memory (not localStorage)
+- Refresh tokens: HTTP-only cookie, Secure flag, SameSite=Strict
+- Session invalidated on password change
+- Maximum 5 concurrent sessions per user
+- No "remember me" with indefinite sessions
 
 ---
 
-## 3. Data Encryption
+## 3. MVP Authorization
 
-### 3.1 Encryption at Rest
+### 3.1 Role-Based Access Control (MVP)
 
-| Data Type | Encryption | Key Management |
-|-----------|-----------|----------------|
-| User credentials | Argon2id (hashing, not encryption) | N/A (one-way) |
-| Secret idea content | AES-256-GCM | Per-idea encryption key, wrapped by master key |
-| Financial records | AES-256-GCM | Dedicated key, rotated quarterly |
-| Personal data (PII) | AES-256-GCM | Per-user encryption key |
-| Database (full) | Transparent Data Encryption (TDE) | Cloud KMS managed |
-| Backups | AES-256-GCM | Offline master key with split custody |
-| Logs | AES-256-GCM | Dedicated logging key |
-
-### 3.2 Encryption in Transit
-
-- TLS 1.3 for all client-server communication (TLS 1.2 minimum fallback)
-- Certificate pinning for mobile applications (if applicable)
-- mTLS for service-to-service communication in backend
-- Cardano node communication via authenticated channels
-- WebSocket connections encrypted via WSS
-
-### 3.3 Key Management
-
-- Cloud KMS (AWS KMS, GCP Cloud KMS, or HashiCorp Vault) for master keys
-- Automatic key rotation: 90 days for data keys, 365 days for master keys
-- Key hierarchy: Master Key -> Data Encryption Keys (DEKs) -> wrapped per resource
-- Hardware Security Module (HSM) backing for master keys (FIPS 140-2 Level 3)
-- Break-glass procedure documented for emergency key access
-- Key access audit logging with alerting on anomalous access patterns
-
----
-
-## 4. Smart Contract Security
-
-### 4.1 Cardano-Specific Considerations
-
-IdeaForge uses Cardano smart contracts for:
-- Pledge escrow (milestone-based release)
-- Investment funding rounds
-- Freelancer task payment escrow
-- Blockchain timestamping for IP protection
-
-#### Language and Framework
-- Smart contracts written in **Aiken** (Rust-inspired language that compiles to Plutus Core/UPLC)
-- Aiken is the confirmed choice per architecture team's ADR-001, aligning with the Rust-first stack
-- Aiken advantages over raw Plutus/Haskell: better developer experience, Rust-inspired syntax, lower execution costs, stronger type system
-- The architect has already designed the `PledgeEscrow` validator in Aiken with parameterized datum, three redeemer actions (Claim, Refund, PlatformRefund), and platform multisig co-signature
-- Follow Cardano CIP-52 audit best practice guidelines
-
-### 4.2 Audit Requirements
-
-#### Pre-Deployment (Mandatory)
-1. **Internal code review**: Minimum 2 senior developers, line-by-line
-2. **Automated analysis**: Static analysis tools (e.g., Cardano-specific linters)
-3. **Property-based testing**: QuickCheck or similar for edge case discovery
-4. **Formal verification**: For high-value contracts (escrow > $10K threshold), use formal methods to prove correctness
-5. **External audit**: Engage a reputable Cardano audit firm (MLabs, Tweag, Vacuumlabs, or equivalent)
-6. **Testnet deployment**: Minimum 30 days on Cardano testnet with bug bounty
-
-#### Post-Deployment (Ongoing)
-- On-chain monitoring for anomalous transactions
-- Bug bounty program (reward: 5-10% of potential loss prevented)
-- Quarterly re-audit of active contracts
-- Upgrade path defined (Cardano reference scripts or proxy patterns)
-
-### 4.3 Common Vulnerability Mitigations
-
-| Vulnerability | Description | Mitigation |
-|--------------|-------------|------------|
-| **Double satisfaction** | Validator satisfied by unintended transaction | Ensure validators check all relevant UTxOs |
-| **Unbounded datum** | Excessively large datum causing DoS | Enforce datum size limits in validator |
-| **Missing redeemer validation** | Validator ignores redeemer content | Always validate redeemer structure and content |
-| **Token name collision** | Minted tokens with misleading names | Strict minting policy with unique identifiers |
-| **Time-based attacks** | Manipulating validity intervals | Use slot ranges conservatively; account for clock skew |
-| **Insufficient staking control** | Reward withdrawal attacks | Validate staking credentials in validators |
-| **Front-running** | Bots submitting competing transactions | Use commit-reveal schemes for sensitive operations |
-| **Re-entrancy (Plutus V1)** | Not applicable to Cardano's EUTXO model | N/A -- EUTXO inherently prevents re-entrancy |
-
-### 4.4 Smart Contract Deployment Process
+Three roles only:
 
 ```
-Development
-    |
-    v
-Unit Tests (100% coverage on happy + unhappy paths)
-    |
-    v
-Property-Based Tests (500+ generated test cases)
-    |
-    v
-Internal Audit (2+ reviewers)
-    |
-    v
-External Audit (certified firm)
-    |
-    v
-Testnet Deployment (30 days)
-    |
-    v
-Bug Bounty (public, 14 days minimum)
-    |
-    v
-Mainnet Deployment (staged rollout, value limits)
-    |
-    v
-Monitoring + Ongoing Audits
+Roles: Curious < Maker/Entrepreneur < Admin
 ```
 
----
+### 3.2 Permissions Matrix (MVP)
 
-## 5. Rate Limiting and DDoS Protection
+| Action | Curious | Entrepreneur | Maker | Admin |
+|--------|---------|-------------|-------|-------|
+| Browse ideas | Y | Y | Y | Y |
+| Stoke (vote) ideas | Y | Y | Y | Y |
+| Comment on ideas | Y | Y | Y | Y |
+| Create ideas | N | Y | Y | Y |
+| Edit own ideas | N | Y | N | Y |
+| Offer to help build | N | N | Y | Y |
+| Delete any content | N | N | N | Y |
+| Manage users | N | N | N | Y |
 
-### 5.1 Rate Limiting Strategy
+### 3.3 Authorization Implementation
 
-#### Application-Level Rate Limits
-
-| Endpoint Category | Limit | Window | Action on Exceed |
-|------------------|-------|--------|-----------------|
-| Authentication (login) | 5 attempts | 15 min | Progressive delay + CAPTCHA |
-| Idea creation | 3 ideas | 24 hours | Queue for moderation |
-| Voting | 100 votes | 1 hour | Soft block + review |
-| Comments | 30 comments | 1 hour | Soft block |
-| API (authenticated) | 1,000 requests | 1 hour | 429 response + backoff |
-| API (AI agent) | 5,000 requests | 1 hour | 429 response + usage billing |
-| Financial transactions | 10 transactions | 1 hour | Human verification |
-| Secret idea access | 20 requests | 1 hour | Alert + review |
-
-#### Implementation (aligned with architecture)
-- Implemented via `tower` middleware with Redis-backed sliding window counters (per architect's API design)
-- Per-user, per-IP, and per-API-key tracking
-- Rate limit headers returned (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset)
-- Graceful degradation: return cached responses when possible
-- Architect's rate limits are per-minute; the table above uses per-hour for strategic planning. Operational limits should follow the architect's per-minute granularity.
-
-### 5.2 DDoS Protection
-
-#### Layer 3/4 (Network)
-- Cloud provider DDoS protection (AWS Shield, Cloudflare, GCP Cloud Armor)
-- Anycast network distribution
-- Traffic scrubbing for volumetric attacks
-- BGP-based black hole routing as last resort
-
-#### Layer 7 (Application)
-- Web Application Firewall (WAF) with OWASP Core Rule Set
-- Bot detection and CAPTCHA challenge for suspicious traffic
-- Geographic rate limiting (higher limits for primary markets)
-- Adaptive rate limiting that adjusts based on load
-- Circuit breakers to protect backend services
-
-#### Infrastructure
-- Auto-scaling groups for web and API servers
-- Database connection pooling with limits
-- Queue-based processing for non-real-time operations (idea creation, voting aggregation)
-- CDN for static assets and cached content
-- Separate infrastructure for financial operations (isolated from public-facing services)
-
-### 5.3 Incident Response
-
-#### DDoS Response Runbook
-1. **Detection** (< 1 min): Automated alerting on traffic anomalies
-2. **Triage** (< 5 min): Classify attack type and vector
-3. **Mitigation** (< 15 min): Engage DDoS protection, adjust WAF rules
-4. **Communication** (< 30 min): Status page update, team notification
-5. **Resolution**: Monitor for attack cessation, gradual rule relaxation
-6. **Post-mortem**: Document attack, update mitigation rules, improve detection
+- Server-side role check on every API endpoint (no client-side-only enforcement)
+- Deny-by-default: new endpoints require explicit authorization rules
+- Idea ownership enforced: only the creator can edit/delete their idea
+- Admin actions audit-logged (simple log entry, not full SIEM)
 
 ---
 
-## 6. Additional Security Measures
+## 4. MVP API Security
 
-### 6.1 Vulnerability Management
-- Continuous vulnerability scanning (weekly automated, monthly manual)
-- Responsible disclosure program with security.txt
-- Bug bounty program (platform: HackerOne or Immunefi for smart contracts)
-- Patch management SLA: Critical (24h), High (72h), Medium (7 days), Low (30 days)
+### 4.1 Basic Protections
 
-### 6.2 Security Development Lifecycle
-- Security training for all developers (OWASP, secure coding)
-- Pre-commit hooks for secret detection (git-secrets, truffleHog)
-- SAST in CI/CD pipeline (Semgrep, CodeQL)
-- DAST against staging environment (OWASP ZAP)
-- Container scanning (Trivy, Grype)
-- Infrastructure scanning (Checkov, tfsec)
+- All API endpoints require authentication (except: public idea listing, registration, login)
+- HTTPS enforced everywhere (HSTS header)
+- CORS restricted to platform domain only
+- HTTP security headers: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
 
-### 6.3 Third-Party Security
-- Vendor security assessment before integration
-- Minimal data sharing with third parties
-- Contractual security requirements (DPA, security SLAs)
-- Regular review of third-party access and permissions
+### 4.2 Rate Limiting
 
-### 6.4 Compliance Requirements
-- GDPR (EU users): DPO appointment, DPIA for high-risk processing, data subject rights
-- SOC 2 Type II (target: Year 2): Trust services criteria for security, availability, confidentiality
-- PCI DSS (via Stripe): Tokenized payment, no card data stored on platform
-- KYC/AML: For investor and high-value transactions; integration with identity verification provider
-- WCAG 2.2 Level AA: Accessibility compliance aligned with UX philosophy (see docs/design/ux_philosophy.md)
+Simple rate limiting via middleware (Tower + in-memory or Redis counter):
+
+| Endpoint | Limit | Window | Action on Exceed |
+|----------|-------|--------|-----------------|
+| Login | 5 attempts | 15 min | 429 + progressive delay |
+| Registration | 3 accounts | 1 hour per IP | 429 |
+| Idea creation | 5 ideas | 24 hours per user | 429 |
+| Stoking (voting) | 100 votes | 1 hour per user | 429 |
+| Comments | 30 comments | 1 hour per user | 429 |
+| General API | 300 requests | 5 min per user | 429 |
+
+### 4.3 Input Validation
+
+- Parameterized queries / prepared statements exclusively (no string concatenation for SQL)
+- Input validation on all user-facing fields (allowlist approach where possible)
+- Output encoding for all user-generated content (prevent XSS)
+- Server-side markdown rendering with sanitization (no raw HTML allowed)
+- Maximum input lengths enforced (idea title: 200 chars, description: 10,000 chars, comment: 5,000 chars)
 
 ---
 
-## 7. Key Risks & Mitigations
+## 5. MVP Data Protection
 
-| Risk | Severity | Likelihood | Mitigation | Owner |
-|------|----------|-----------|------------|-------|
-| Smart contract vulnerability in pledge escrow | Critical | Medium | External audit (CIP-52 compliant), Aiken type safety, property-based testing, testnet-first deployment, bug bounty | Architecture + Security |
-| Secret idea data breach via database access | Critical | Low | **Resolved in architecture**: Separate `secret_ideas` schema with per-idea AES-256-GCM encryption, HSM-backed KMS, mTLS access proxy, and audit logging (`docs/architecture/database_schema.md` Section 5b) | Security + Architecture |
-| Bot army manipulation of Stoke signals | High | Medium | Separate human Stokes / AI endorsements (completely separate DB tables per `docs/architecture/database_schema.md` Sections 2.5/2.5b), AI endorsements excluded from maturity advancement, Sybil resistance measures, anomaly detection | Security + Product |
-| Pledge-to-buy classified as security offering | High | Medium | Structure as pre-orders not investments, engage securities counsel early, Regulation CF exemption for US users, clear ToS language | Business + Legal |
-| Undisclosed AI agent posing as human | High | Medium | Behavioral analysis, CAPTCHA challenges, device fingerprinting, community reporting, permanent ban on discovery | Security |
-| Supply chain attack on Rust dependencies | Medium | Low | Dependency lock files, cargo-deny for license/vulnerability checks, SBOM generation, signed container images | Architecture |
-| Cardano network congestion delaying pledges | Medium | Medium | Queue-based transaction processing, retry with backoff, clear user communication on confirmation times | Architecture |
-| GDPR right-to-erasure conflicting with blockchain timestamps | Medium | Low | Only store hashes on-chain (not PII), platform retains right to delete off-chain data while hash remains as proof | Legal + Security |
-| Blockfrost API dependency (single point of failure) | Medium | Low | Circuit breaker pattern, fallback to cached data, plan for self-hosted Cardano node at scale | Architecture |
-| Key management failure (KMS unavailable) | High | Low | Break-glass procedure, split custody for master keys, HSM backing, regular DR testing | Security + Ops |
+### 5.1 What We Store
+
+| Data | Sensitivity | Protection |
+|------|------------|------------|
+| Email addresses | Medium | Database-level access controls |
+| Hashed passwords | High | Argon2id (irreversible) |
+| Ideas (title, description) | Low (all public in MVP) | Standard database backups |
+| Comments | Low | Standard database backups |
+| Stoke votes | Low | Standard database backups |
+| User profiles | Low-Medium | Database-level access controls |
+
+### 5.2 What We Do NOT Store (MVP)
+
+- Credit card numbers (no payments in MVP)
+- Crypto wallet keys (no crypto in MVP)
+- Secret idea content (no secret ideas in MVP)
+- Government IDs or KYC documents (no financial features in MVP)
+- Encrypted content (nothing requires encryption beyond TLS in transit and standard DB at rest)
+
+### 5.3 Database Security
+
+- Database access restricted to application service account only
+- No direct database access from public internet
+- Database credentials stored in environment variables (not in code)
+- Regular automated backups
+- Transparent Data Encryption (TDE) if cloud-hosted database supports it (standard cloud default)
+
+---
+
+## 6. MVP Infrastructure Security
+
+### 6.1 Deployment
+
+- Container-based deployment (Docker)
+- Minimal container images (Alpine-based or distroless)
+- No default credentials in any environment
+- Secrets injected via environment variables at runtime
+- HTTPS with TLS 1.2+ (TLS 1.3 preferred)
+
+### 6.2 Dependency Management
+
+- Dependency lock files committed to version control (Cargo.lock)
+- Automated vulnerability scanning (cargo-audit, Dependabot)
+- Pin dependency versions; no floating ranges
+- Minimal dependency policy: evaluate necessity before adding packages
+
+### 6.3 Logging (MVP)
+
+- Structured logging (JSON format)
+- Log: authentication successes/failures, authorization failures, rate limit hits
+- No sensitive data in logs (no passwords, tokens, or PII)
+- Log retention: 30 days (sufficient for MVP debugging)
+- No full SIEM at MVP -- review logs manually when issues arise
+
+---
+
+## 7. Security Checklist Before Launch
+
+- [ ] All API endpoints authenticated (except public reads and auth endpoints)
+- [ ] Passwords hashed with Argon2id
+- [ ] HTTPS enforced, HSTS header set
+- [ ] CORS restricted to platform domain
+- [ ] Rate limiting active on all endpoints
+- [ ] Input validation on all user inputs
+- [ ] Output encoding on all user-generated content
+- [ ] SQL injection prevention (parameterized queries only)
+- [ ] XSS prevention (CSP header, sanitized markdown rendering)
+- [ ] No secrets in code or version control
+- [ ] Container images scanned for vulnerabilities
+- [ ] Dependency audit clean (cargo-audit)
+- [ ] Session management working (JWT rotation, refresh token rotation)
+- [ ] Account lockout after failed login attempts
+- [ ] Error responses do not leak internal details
+
+---
+
+## 8. Security Roadmap (Post-MVP)
+
+When features are added, security scales with them:
+
+### Phase 2: Collaboration Features
+- Add MFA (TOTP) -- optional for all users
+- Add secret idea infrastructure if validated: per-idea encryption, KMS, access grants
+- Add NDA-gated access controls
+- Begin GDPR compliance work (DPO, privacy policy, data subject rights)
+
+### Phase 3: Financial Infrastructure
+- Smart contract security (Aiken audit, formal verification, testnet deployment)
+- PCI DSS compliance via Stripe tokenization
+- KYC/AML integration for investors
+- Dedicated financial transaction logging
+- External security audit
+- Bug bounty program launch
+- WAF and DDoS protection
+
+### Phase 4: Scale
+- SOC 2 Type II certification
+- HSM-backed KMS for master keys
+- mTLS for service-to-service communication
+- Full SIEM integration (ELK/Loki + Grafana)
+- AI agent API security (bot registration, capability verification, rate limiting)
+- Penetration testing (annual)
+
+---
+
+## 9. Key Risks and Mitigations (MVP)
+
+| Risk | Severity | Likelihood | Mitigation |
+|------|----------|-----------|------------|
+| Account takeover via credential stuffing | Medium | Medium | Argon2id hashing, account lockout, breached password check, rate limiting |
+| XSS in user-generated content | Medium | Medium | CSP header, output encoding, sanitized markdown rendering, no raw HTML |
+| SQL injection | High | Low | Parameterized queries only, no string concatenation |
+| Spam/bot account creation | Medium | High | Rate limiting on registration, email verification, CAPTCHA if needed |
+| Data breach of user emails | Medium | Low | Database access restricted, standard cloud security, no unnecessary PII collection |
+| Dependency vulnerability | Medium | Medium | cargo-audit in CI, Dependabot alerts, pinned versions |
+
+**Note**: The MVP risk profile is dramatically lower than the full platform because there is no money, no secrets, and no regulated data. The worst-case breach exposes emails, public ideas, and hashed passwords -- serious but not catastrophic. This is the security posture of a standard content platform, which is exactly what the MVP is.

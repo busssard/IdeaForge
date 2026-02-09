@@ -4,16 +4,17 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// JWT claims embedded in access tokens.
+///
+/// MVP: human-only, no is_bot field.
+/// Phase 2+: restore is_bot for AI agent support.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     /// Subject (user ID)
     pub sub: Uuid,
     /// User email
     pub email: String,
-    /// User role names
-    pub roles: Vec<String>,
-    /// Whether this is a bot account
-    pub is_bot: bool,
+    /// User role (single role for MVP: entrepreneur / maker / curious)
+    pub role: String,
     /// Issued at (unix timestamp)
     pub iat: i64,
     /// Expiration (unix timestamp)
@@ -33,15 +34,13 @@ impl JwtConfig {
         &self,
         user_id: Uuid,
         email: &str,
-        roles: Vec<String>,
-        is_bot: bool,
+        role: &str,
     ) -> Result<String, jsonwebtoken::errors::Error> {
         let now = Utc::now();
         let claims = Claims {
             sub: user_id,
             email: email.to_string(),
-            roles,
-            is_bot,
+            role: role.to_string(),
             iat: now.timestamp(),
             exp: (now + self.access_token_ttl).timestamp(),
         };

@@ -16,37 +16,44 @@ pub struct Idea {
     pub openness: IdeaOpenness,
     pub metadata: serde_json::Value,
     pub is_archived: bool,
-    pub human_approvals: i32,
-    pub ai_endorsements: i32,
-    pub total_pledged_lovelace: i64,
+    pub stoke_count: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
-/// Maturity levels form a state machine with defined transitions.
-/// Only **human approvals** count toward maturity advancement.
-/// AI endorsements are informational only and never trigger transitions.
+/// MVP maturity levels: 3 stages (simplified from 7).
+///
+/// - **Spark**: New idea, just posted. Default state.
+/// - **Building**: Validated interest (5+ Stokes), developing.
+/// - **InWork**: Active team, executing.
+///
+/// Only **human Stokes** count toward maturity advancement.
+/// Full 7-level state machine is defined in the long-term architecture
+/// (docs/architecture/database_schema.md) and will be restored in Phase 2+.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum IdeaMaturity {
-    UnansweredQuestion,
-    HalfBaked,
-    ThoughtThrough,
-    SeriousProposal,
+    /// New idea, just posted
+    Spark,
+    /// Validated interest, developing (formerly "thought_through")
+    Building,
+    /// Active team, executing (formerly "in_work")
     InWork,
-    AlmostFinished,
-    Completed,
 }
 
-/// Criteria required for a maturity transition, aligned with the Product Manager's spec.
-/// All approval thresholds count **human approvals only**.
+impl Default for IdeaMaturity {
+    fn default() -> Self {
+        Self::Spark
+    }
+}
+
+/// Criteria required for a maturity transition.
+/// All thresholds count **human Stokes only**.
 #[derive(Debug, Clone)]
 pub struct TransitionRequirements {
-    pub min_human_approvals: i32,
-    pub min_human_comments: i32,
-    pub min_contributors: i32,
+    pub min_stokes: i32,
     pub requires_author_action: bool,
-    pub requires_admin_verification: bool,
+    pub requires_team_member: bool,
 }
 
 impl IdeaMaturity {
@@ -55,62 +62,27 @@ impl IdeaMaturity {
     pub fn transition_requirements(&self, target: &IdeaMaturity) -> Option<TransitionRequirements> {
         use IdeaMaturity::*;
         match (self, target) {
-            (UnansweredQuestion, HalfBaked) => Some(TransitionRequirements {
-                min_human_approvals: 5,
-                min_human_comments: 0,
-                min_contributors: 0,
+            (Spark, Building) => Some(TransitionRequirements {
+                min_stokes: 5,
                 requires_author_action: false,
-                requires_admin_verification: false,
+                requires_team_member: false,
             }),
-            (HalfBaked, ThoughtThrough) => Some(TransitionRequirements {
-                min_human_approvals: 15,
-                min_human_comments: 3,
-                min_contributors: 0,
-                requires_author_action: false,
-                requires_admin_verification: false,
-            }),
-            (ThoughtThrough, SeriousProposal) => Some(TransitionRequirements {
-                min_human_approvals: 30,
-                min_human_comments: 0,
-                min_contributors: 3,
-                requires_author_action: false,
-                requires_admin_verification: false,
-            }),
-            (SeriousProposal, InWork) => Some(TransitionRequirements {
-                min_human_approvals: 0,
-                min_human_comments: 0,
-                min_contributors: 0,
+            (Building, InWork) => Some(TransitionRequirements {
+                min_stokes: 0,
                 requires_author_action: true,
-                requires_admin_verification: false,
+                requires_team_member: true,
             }),
-            (InWork, AlmostFinished) => Some(TransitionRequirements {
-                min_human_approvals: 0,
-                min_human_comments: 0,
-                min_contributors: 0,
+            // Regression: InWork -> Building (blockers found)
+            (InWork, Building) => Some(TransitionRequirements {
+                min_stokes: 0,
                 requires_author_action: true,
-                requires_admin_verification: false,
-            }),
-            (AlmostFinished, Completed) => Some(TransitionRequirements {
-                min_human_approvals: 0,
-                min_human_comments: 0,
-                min_contributors: 0,
-                requires_author_action: true,
-                requires_admin_verification: true,
-            }),
-            // Regressions from InWork (blockers found)
-            (InWork, SeriousProposal) | (InWork, ThoughtThrough) => Some(TransitionRequirements {
-                min_human_approvals: 0,
-                min_human_comments: 0,
-                min_contributors: 0,
-                requires_author_action: true,
-                requires_admin_verification: false,
+                requires_team_member: false,
             }),
             _ => None,
         }
     }
 
-    /// Check whether a transition from `self` to `target` is structurally valid
-    /// (ignoring threshold checks, which require idea context).
+    /// Check whether a transition from `self` to `target` is structurally valid.
     pub fn can_transition_to(&self, target: &IdeaMaturity) -> bool {
         self.transition_requirements(target).is_some()
     }
@@ -129,50 +101,31 @@ impl IdeaMaturity {
 }
 
 /// How open/protected an idea is.
+///
+/// MVP has 3 modes (no Secret -- deferred to Phase 2+ with encryption infrastructure).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum IdeaOpenness {
     /// Fully open, anyone can see and contribute
-    OpenSource,
-    /// Open but with contributor agreements (community co-creation)
-    OpenCollaboration,
-    /// Commercially oriented, visible but with contribution controls
+    Open,
+    /// Open but team membership is curated
+    Collaborative,
+    /// Visible but contributions require approval
     Commercial,
-    /// IP-protected, restricted access (requires NDA + entrepreneur approval)
-    Secret,
 }
 
-/// Human approval of an idea. Only humans can approve.
-/// Approvals are the sole signal for maturity advancement.
+impl Default for IdeaOpenness {
+    fn default() -> Self {
+        Self::Open
+    }
+}
+
+/// Human "Stoke" -- an upvote/approval of an idea.
+/// Only humans can Stoke. Stokes drive maturity advancement.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Approval {
+pub struct Stoke {
     pub id: Uuid,
     pub idea_id: Uuid,
     pub user_id: Uuid,
-    pub comment: Option<String>,
     pub created_at: DateTime<Utc>,
-}
-
-/// AI agent endorsement of an idea. Completely separate from human approvals.
-/// Endorsements are informational only and never count toward maturity.
-/// Aligns with EU AI Act Article 50 transparency requirements.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AiEndorsement {
-    pub id: Uuid,
-    pub idea_id: Uuid,
-    pub agent_id: Uuid,
-    pub operator_id: Uuid,
-    pub confidence: Option<f32>,
-    pub reasoning: Option<String>,
-    pub model_version: Option<String>,
-    pub created_at: DateTime<Utc>,
-}
-
-/// Summary of approvals and endorsements for an idea, always displayed separately.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApprovalSummary {
-    pub human_approvals: i32,
-    pub ai_endorsements: i32,
-    pub human_comments: i32,
-    pub ai_comments: i32,
 }

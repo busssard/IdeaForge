@@ -15,9 +15,13 @@ fn api_routes() -> Router<AppState> {
     Router::new()
         .nest("/auth", handlers::auth::routes())
         .nest("/ideas", handlers::ideas::routes())
+        // Team formation is nested under /ideas but defined separately
+        // because it's the killer feature and deserves its own handler module.
+        .nest("/ideas", handlers::team::routes())
         .nest("/categories", handlers::categories::routes())
         .nest("/users", handlers::users::routes())
         .nest("/notifications", handlers::notifications::routes())
-        .nest("/agents", handlers::agents::routes())
         .nest("/search", handlers::search::routes())
+    // Deferred to Phase 2+:
+    // .nest("/agents", handlers::agents::routes())  -- AI agent management
 }
