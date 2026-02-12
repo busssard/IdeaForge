@@ -20,7 +20,7 @@ pub fn IdeaDetailPage() -> impl IntoView {
         <Suspense fallback=move || view! { <Loading /> }>
             {move || {
                 idea.get().map(|result| {
-                    match result {
+                    match &*result {
                         Ok(idea) => {
                             let openness_class = match idea.openness.as_str() {
                                 "open" => "badge badge-open",

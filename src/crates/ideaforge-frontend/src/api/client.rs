@@ -1,4 +1,4 @@
-use gloo_net::http::{Request, Response};
+use gloo_net::http::{Request, RequestBuilder, Response};
 use gloo_storage::{LocalStorage, Storage};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -39,7 +39,7 @@ pub fn get_refresh_token() -> Option<String> {
     LocalStorage::get::<String>(REFRESH_KEY).ok()
 }
 
-fn build_request(method: &str, url: &str) -> Request {
+fn build_request(method: &str, url: &str) -> RequestBuilder {
     let req = match method {
         "GET" => Request::get(url),
         "POST" => Request::post(url),
@@ -94,12 +94,18 @@ pub async fn get<T: DeserializeOwned>(url: &str) -> Result<T, ApiError> {
 }
 
 pub async fn post<B: Serialize, T: DeserializeOwned>(url: &str, body: &B) -> Result<T, ApiError> {
+    let body_str = serde_json::to_string(body).map_err(|e| ApiError {
+        status: 0,
+        code: "SERIALIZE_ERROR".into(),
+        message: e.to_string(),
+    })?;
+
     let resp = build_request("POST", url)
-        .json(body)
+        .body(body_str)
         .map_err(|e| ApiError {
             status: 0,
-            code: "SERIALIZE_ERROR".into(),
-            message: e.to_string(),
+            code: "REQUEST_BUILD_ERROR".into(),
+            message: format!("{e:?}"),
         })?
         .send()
         .await
@@ -142,12 +148,18 @@ pub async fn post_no_body<T: DeserializeOwned>(url: &str) -> Result<T, ApiError>
 }
 
 pub async fn put<B: Serialize, T: DeserializeOwned>(url: &str, body: &B) -> Result<T, ApiError> {
+    let body_str = serde_json::to_string(body).map_err(|e| ApiError {
+        status: 0,
+        code: "SERIALIZE_ERROR".into(),
+        message: e.to_string(),
+    })?;
+
     let resp = build_request("PUT", url)
-        .json(body)
+        .body(body_str)
         .map_err(|e| ApiError {
             status: 0,
-            code: "SERIALIZE_ERROR".into(),
-            message: e.to_string(),
+            code: "REQUEST_BUILD_ERROR".into(),
+            message: format!("{e:?}"),
         })?
         .send()
         .await

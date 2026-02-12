@@ -157,7 +157,7 @@ fn CreateIdeaForm() -> impl IntoView {
                         <Suspense fallback=|| ()>
                             {move || {
                                 categories.get().map(|cats| {
-                                    cats.into_iter().map(|c| {
+                                    cats.iter().map(|c| {
                                         view! {
                                             <option value={c.id.clone()}>{c.name.clone()}</option>
                                         }

@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::HtmlSelectElement;
 
 use crate::api;
@@ -63,7 +64,7 @@ pub fn BrowsePage() -> impl IntoView {
                 <Suspense fallback=|| ()>
                     {move || {
                         categories.get().map(|cats| {
-                            cats.into_iter().map(|c| {
+                            cats.iter().map(|c| {
                                 view! {
                                     <option value={c.id.clone()}>{c.name.clone()}</option>
                                 }
@@ -86,12 +87,12 @@ pub fn BrowsePage() -> impl IntoView {
         <Suspense fallback=move || view! { <Loading /> }>
             {move || {
                 ideas.get().map(|result| {
-                    match result {
+                    match &*result {
                         Ok(resp) => {
                             let current_page = resp.meta.page;
                             let total_pages = resp.meta.total_pages;
                             let total = resp.meta.total;
-                            let items: Vec<IdeaResponse> = resp.data;
+                            let items: Vec<IdeaResponse> = resp.data.clone();
 
                             if items.is_empty() {
                                 view! {

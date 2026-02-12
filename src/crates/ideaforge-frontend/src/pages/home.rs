@@ -30,7 +30,7 @@ pub fn HomePage() -> impl IntoView {
             <Suspense fallback=move || view! { <Loading /> }>
                 {move || {
                     ideas.get().map(|result| {
-                        match result {
+                        match &*result {
                             Ok(resp) => {
                                 if resp.data.is_empty() {
                                     view! {
@@ -41,7 +41,7 @@ pub fn HomePage() -> impl IntoView {
                                         </div>
                                     }.into_any()
                                 } else {
-                                    let items: Vec<IdeaResponse> = resp.data;
+                                    let items: Vec<IdeaResponse> = resp.data.clone();
                                     view! {
                                         <div class="ideas-grid">
                                             {items.into_iter().map(|idea| {

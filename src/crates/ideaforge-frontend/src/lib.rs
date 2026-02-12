@@ -16,7 +16,6 @@ use pages::create_idea::CreateIdeaPage;
 use pages::dashboard::DashboardPage;
 use pages::home::HomePage;
 use pages::idea_detail::IdeaDetailPage;
-use pages::not_found::NotFoundPage;
 use pages::profile::ProfilePage;
 use pages::settings::SettingsPage;
 use state::auth::AuthState;
@@ -31,7 +30,7 @@ pub fn App() -> impl IntoView {
         <Router>
             <Navbar />
             <main class="main-content">
-                <Routes fallback=|| view! { <NotFoundPage /> }>
+                <Routes fallback=|| view! { <p>"404 — Page not found"</p> }.into_view()>
                     <Route path=path!("/") view=HomePage />
                     <Route path=path!("/browse") view=BrowsePage />
                     <Route path=path!("/login") view=LoginPage />
