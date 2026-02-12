@@ -6,6 +6,7 @@ pub mod state;
 use leptos::prelude::*;
 use leptos_router::components::*;
 use leptos_router::path;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 use components::layout::navbar::Navbar;
 use components::layout::footer::Footer;
@@ -19,6 +20,12 @@ use pages::idea_detail::IdeaDetailPage;
 use pages::profile::ProfilePage;
 use pages::settings::SettingsPage;
 use state::auth::AuthState;
+
+#[wasm_bindgen(start)]
+pub fn start() {
+    console_error_panic_hook::set_once();
+    mount_to_body(App);
+}
 
 #[component]
 pub fn App() -> impl IntoView {

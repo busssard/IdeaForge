@@ -74,6 +74,13 @@ cargo run --bin seed
 # --- 6. Start servers ---
 echo -e "${GREEN}[6/6] Starting servers...${NC}"
 
+# Kill any stale backend on :3000
+if lsof -ti:3000 >/dev/null 2>&1; then
+    echo -e "${YELLOW}  Killing stale process on port 3000...${NC}"
+    kill $(lsof -ti:3000) 2>/dev/null
+    sleep 1
+fi
+
 # Backend on :3000
 cargo run --bin ideaforge &
 BACKEND_PID=$!
