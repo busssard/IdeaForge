@@ -23,7 +23,7 @@ pub fn IdeaCard(idea: IdeaResponse) -> impl IntoView {
                 <MaturityBadge maturity=maturity />
             </div>
             <p class="idea-card-summary">{summary}</p>
-            <div class="idea-card-footer" on:click=|ev: web_sys::MouseEvent| ev.stop_propagation()>
+            <div class="idea-card-footer" on:click=|ev: web_sys::MouseEvent| { ev.prevent_default(); ev.stop_propagation(); }>
                 <StokeButton
                     idea_id=idea_id_for_stoke
                     initial_count=stoke_count
