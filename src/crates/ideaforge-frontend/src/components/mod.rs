@@ -7,3 +7,7 @@ pub mod pagination;
 pub mod loading;
 pub mod error_display;
 pub mod protected;
+pub mod comment_section;
+pub mod suggestion_section;
+pub mod team_panel;
+pub mod subscribe_button;
