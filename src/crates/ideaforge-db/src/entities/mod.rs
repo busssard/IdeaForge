@@ -7,5 +7,9 @@ pub mod category;
 pub mod team_member;
 pub mod team_application;
 pub mod subscription;
+pub mod invite_link;
+pub mod flag;
+pub mod bot_endorsement;
+pub mod notification;
 
 pub use enums::*;

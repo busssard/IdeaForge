@@ -32,6 +32,7 @@ impl<'a> ContributionRepository<'a> {
             contribution_type: Set(contribution_type),
             title: Set(title),
             body: Set(body.to_string()),
+            is_bot: Set(false),
             created_at: Set(now),
             updated_at: Set(now),
         };

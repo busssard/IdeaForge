@@ -31,6 +31,13 @@ impl<'a> UserRepository<'a> {
             avatar_url: Set(None),
             role: Set(role),
             email_verified: Set(false),
+            is_bot: Set(false),
+            bot_operator: Set(None),
+            bot_description: Set(None),
+            bot_api_key_hash: Set(None),
+            skills: Set(serde_json::json!([])),
+            looking_for: Set(None),
+            availability: Set(None),
             created_at: Set(now),
             updated_at: Set(now),
         };

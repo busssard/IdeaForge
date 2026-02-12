@@ -11,6 +11,8 @@ pub enum UserRole {
     Maker,
     #[sea_orm(string_value = "curious")]
     Curious,
+    #[sea_orm(string_value = "admin")]
+    Admin,
 }
 
 impl Default for UserRole {
@@ -25,6 +27,7 @@ impl std::fmt::Display for UserRole {
             Self::Entrepreneur => write!(f, "entrepreneur"),
             Self::Maker => write!(f, "maker"),
             Self::Curious => write!(f, "curious"),
+            Self::Admin => write!(f, "admin"),
         }
     }
 }
@@ -35,8 +38,24 @@ impl UserRole {
             "entrepreneur" => Some(Self::Entrepreneur),
             "maker" => Some(Self::Maker),
             "curious" => Some(Self::Curious),
+            "admin" => Some(Self::Admin),
             _ => None,
         }
+    }
+
+    /// Whether this role can create ideas.
+    pub fn can_create_ideas(&self) -> bool {
+        matches!(self, Self::Entrepreneur | Self::Maker | Self::Admin)
+    }
+
+    /// Whether this role can submit formal suggestions (not just comments).
+    pub fn can_suggest(&self) -> bool {
+        matches!(self, Self::Entrepreneur | Self::Maker | Self::Admin)
+    }
+
+    /// Whether this role has admin/moderation powers.
+    pub fn is_admin(&self) -> bool {
+        matches!(self, Self::Admin)
     }
 }
 
@@ -89,6 +108,8 @@ pub enum IdeaOpenness {
     Collaborative,
     #[sea_orm(string_value = "commercial")]
     Commercial,
+    #[sea_orm(string_value = "private")]
+    Private,
 }
 
 impl Default for IdeaOpenness {
@@ -103,6 +124,7 @@ impl std::fmt::Display for IdeaOpenness {
             Self::Open => write!(f, "open"),
             Self::Collaborative => write!(f, "collaborative"),
             Self::Commercial => write!(f, "commercial"),
+            Self::Private => write!(f, "private"),
         }
     }
 }
@@ -113,8 +135,14 @@ impl IdeaOpenness {
             "open" => Some(Self::Open),
             "collaborative" => Some(Self::Collaborative),
             "commercial" => Some(Self::Commercial),
+            "private" => Some(Self::Private),
             _ => None,
         }
+    }
+
+    /// Whether this idea should appear in public browse/search results.
+    pub fn is_publicly_listed(&self) -> bool {
+        matches!(self, Self::Open | Self::Collaborative | Self::Commercial)
     }
 }
 
@@ -235,4 +263,74 @@ impl ApplicationStatus {
             _ => None,
         }
     }
+}
+
+/// PostgreSQL enum: invite_permission
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "invite_permission")]
+pub enum InvitePermission {
+    #[sea_orm(string_value = "view")]
+    View,
+    #[sea_orm(string_value = "comment")]
+    Comment,
+}
+
+impl Default for InvitePermission {
+    fn default() -> Self {
+        Self::View
+    }
+}
+
+/// PostgreSQL enum: flag_target_type
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "flag_target_type")]
+pub enum FlagTargetType {
+    #[sea_orm(string_value = "idea")]
+    Idea,
+    #[sea_orm(string_value = "comment")]
+    Comment,
+    #[sea_orm(string_value = "user")]
+    User,
+}
+
+/// PostgreSQL enum: flag_status
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "flag_status")]
+pub enum FlagStatus {
+    #[sea_orm(string_value = "pending")]
+    Pending,
+    #[sea_orm(string_value = "reviewed")]
+    Reviewed,
+    #[sea_orm(string_value = "dismissed")]
+    Dismissed,
+}
+
+impl Default for FlagStatus {
+    fn default() -> Self {
+        Self::Pending
+    }
+}
+
+/// PostgreSQL enum: notification_kind
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "notification_kind")]
+pub enum NotificationKind {
+    #[sea_orm(string_value = "stoke")]
+    Stoke,
+    #[sea_orm(string_value = "comment")]
+    Comment,
+    #[sea_orm(string_value = "suggestion")]
+    Suggestion,
+    #[sea_orm(string_value = "team_application")]
+    TeamApplication,
+    #[sea_orm(string_value = "team_accepted")]
+    TeamAccepted,
+    #[sea_orm(string_value = "team_rejected")]
+    TeamRejected,
+    #[sea_orm(string_value = "milestone")]
+    Milestone,
+    #[sea_orm(string_value = "bot_analysis")]
+    BotAnalysis,
+    #[sea_orm(string_value = "mention")]
+    Mention,
 }

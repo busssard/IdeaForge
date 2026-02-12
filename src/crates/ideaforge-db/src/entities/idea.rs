@@ -17,6 +17,8 @@ pub struct Model {
     pub openness: IdeaOpenness,
     pub category_id: Option<Uuid>,
     pub stoke_count: i32,
+    #[sea_orm(column_type = "JsonBinary")]
+    pub looking_for_skills: serde_json::Value,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
     pub archived_at: Option<DateTimeWithTimeZone>,

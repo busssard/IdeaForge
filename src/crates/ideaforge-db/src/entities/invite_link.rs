@@ -1,23 +1,22 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use super::enums::ContributionKind;
+use super::enums::InvitePermission;
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "contributions")]
+#[sea_orm(table_name = "invite_links")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub idea_id: Uuid,
-    pub user_id: Uuid,
-    pub parent_id: Option<Uuid>,
-    pub contribution_type: ContributionKind,
-    pub title: Option<String>,
-    #[sea_orm(column_type = "Text")]
-    pub body: String,
-    pub is_bot: bool,
+    #[sea_orm(unique)]
+    pub token: String,
+    pub permission: InvitePermission,
+    pub created_by: Uuid,
+    pub expires_at: Option<DateTimeWithTimeZone>,
+    pub revoked_at: Option<DateTimeWithTimeZone>,
+    pub access_count: i32,
     pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -30,16 +29,10 @@ pub enum Relation {
     Idea,
     #[sea_orm(
         belongs_to = "super::user::Entity",
-        from = "Column::UserId",
+        from = "Column::CreatedBy",
         to = "super::user::Column::Id"
     )]
-    User,
-    #[sea_orm(
-        belongs_to = "Entity",
-        from = "Column::ParentId",
-        to = "Column::Id"
-    )]
-    Parent,
+    Creator,
 }
 
 impl Related<super::idea::Entity> for Entity {
@@ -50,7 +43,7 @@ impl Related<super::idea::Entity> for Entity {
 
 impl Related<super::user::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::User.def()
+        Relation::Creator.def()
     }
 }
 

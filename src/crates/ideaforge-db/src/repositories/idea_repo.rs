@@ -35,6 +35,7 @@ impl<'a> IdeaRepository<'a> {
             openness: Set(openness),
             category_id: Set(category_id),
             stoke_count: Set(0),
+            looking_for_skills: Set(serde_json::json!([])),
             created_at: Set(now),
             updated_at: Set(now),
             archived_at: Set(None),

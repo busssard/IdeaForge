@@ -16,6 +16,14 @@ pub struct Model {
     pub avatar_url: Option<String>,
     pub role: UserRole,
     pub email_verified: bool,
+    pub is_bot: bool,
+    pub bot_operator: Option<String>,
+    pub bot_description: Option<String>,
+    pub bot_api_key_hash: Option<String>,
+    #[sea_orm(column_type = "JsonBinary")]
+    pub skills: serde_json::Value,
+    pub looking_for: Option<String>,
+    pub availability: Option<String>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
 }

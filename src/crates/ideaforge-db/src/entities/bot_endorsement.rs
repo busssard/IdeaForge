@@ -1,23 +1,15 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use super::enums::ContributionKind;
-
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "contributions")]
+#[sea_orm(table_name = "bot_endorsements")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
     pub idea_id: Uuid,
-    pub user_id: Uuid,
-    pub parent_id: Option<Uuid>,
-    pub contribution_type: ContributionKind,
-    pub title: Option<String>,
-    #[sea_orm(column_type = "Text")]
-    pub body: String,
-    pub is_bot: bool,
+    pub bot_id: Uuid,
+    pub reason: String,
     pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -30,16 +22,10 @@ pub enum Relation {
     Idea,
     #[sea_orm(
         belongs_to = "super::user::Entity",
-        from = "Column::UserId",
+        from = "Column::BotId",
         to = "super::user::Column::Id"
     )]
-    User,
-    #[sea_orm(
-        belongs_to = "Entity",
-        from = "Column::ParentId",
-        to = "Column::Id"
-    )]
-    Parent,
+    Bot,
 }
 
 impl Related<super::idea::Entity> for Entity {
@@ -50,7 +36,7 @@ impl Related<super::idea::Entity> for Entity {
 
 impl Related<super::user::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::User.def()
+        Relation::Bot.def()
     }
 }
 
