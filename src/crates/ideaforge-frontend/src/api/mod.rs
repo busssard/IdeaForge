@@ -5,3 +5,6 @@ pub mod ideas;
 pub mod stokes;
 pub mod categories;
 pub mod users;
+pub mod contributions;
+pub mod team;
+pub mod subscriptions;

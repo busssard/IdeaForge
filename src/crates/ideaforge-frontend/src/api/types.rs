@@ -43,6 +43,8 @@ pub struct IdeaResponse {
     pub openness: String,
     pub category_id: Option<String>,
     pub stoke_count: i32,
+    #[serde(default)]
+    pub has_stoked: Option<bool>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -144,6 +146,81 @@ pub struct CategoryResponse {
     pub icon: Option<String>,
     pub parent_id: Option<String>,
     pub sort_order: i32,
+}
+
+// --- Contributions ---
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ContributionResponse {
+    pub id: String,
+    pub idea_id: String,
+    pub user_id: String,
+    pub contribution_type: String,
+    pub title: Option<String>,
+    pub body: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ContributionListResponse {
+    pub data: Vec<ContributionResponse>,
+    pub meta: PaginationMeta,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CreateContributionRequest {
+    pub contribution_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    pub body: String,
+}
+
+// --- Team ---
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TeamApplicationResponse {
+    pub id: String,
+    pub idea_id: String,
+    pub user_id: String,
+    pub message: String,
+    pub status: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TeamApplicationListResponse {
+    pub data: Vec<TeamApplicationResponse>,
+    pub meta: PaginationMeta,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ApplyToTeamRequest {
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ReviewApplicationRequest {
+    pub accepted: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TeamMemberResponse {
+    pub id: String,
+    pub idea_id: String,
+    pub user_id: String,
+    pub display_name: String,
+    pub role: String,
+    pub joined_at: String,
+}
+
+// --- Subscriptions ---
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SubscriptionResponse {
+    pub id: String,
+    pub user_id: String,
+    pub idea_id: String,
+    pub created_at: String,
 }
 
 // --- Errors ---

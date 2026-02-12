@@ -45,3 +45,13 @@ pub async fn update_idea(
 pub async fn archive_idea(id: &str) -> Result<(), client::ApiError> {
     client::delete_req(&format!("/api/v1/ideas/{id}")).await
 }
+
+pub async fn list_my_stoked_ideas(
+    page: u64,
+    per_page: u64,
+) -> Result<IdeaListResponse, client::ApiError> {
+    client::get(&format!(
+        "/api/v1/ideas/my-stokes?page={page}&per_page={per_page}"
+    ))
+    .await
+}
