@@ -1,0 +1,14 @@
+[build]
+target = "index.html"
+dist = "dist"
+
+[watch]
+watch = ["src", "style", "index.html"]
+
+[[proxy]]
+backend = "http://localhost:3000/api/"
+rewrite = "/api/"
+
+[[proxy]]
+backend = "http://localhost:3000/health"
+rewrite = "/health"

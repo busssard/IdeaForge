@@ -1,0 +1,9 @@
+pub mod auth;
+pub mod home;
+pub mod browse;
+pub mod idea_detail;
+pub mod create_idea;
+pub mod dashboard;
+pub mod profile;
+pub mod settings;
+pub mod not_found;

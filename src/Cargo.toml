@@ -9,6 +9,17 @@ members = [
     "crates/ideaforge-blockchain",
     "crates/ideaforge-payments",
     "crates/ideaforge-events",
+    "crates/ideaforge-frontend",
+]
+default-members = [
+    "crates/ideaforge-core",
+    "crates/ideaforge-db",
+    "crates/ideaforge-api",
+    "crates/ideaforge-auth",
+    "crates/ideaforge-search",
+    "crates/ideaforge-blockchain",
+    "crates/ideaforge-payments",
+    "crates/ideaforge-events",
 ]
 
 [workspace.package]
@@ -24,7 +35,9 @@ tokio = { version = "1", features = ["full"] }
 # Web framework
 axum = { version = "0.7", features = ["ws", "macros"] }
 tower = { version = "0.4", features = ["full"] }
-tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip", "set-header", "request-id", "propagate-header"] }
+axum-extra = { version = "0.9", features = ["typed-header"] }
+http = "1"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
@@ -47,7 +60,10 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1"
 anyhow = "1"
+async-trait = "0.1"
 config = "0.14"
+dotenvy = "0.15"
+validator = { version = "0.19", features = ["derive"] }
 
 # Internal crates
 ideaforge-core = { path = "crates/ideaforge-core" }

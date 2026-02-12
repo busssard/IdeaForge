@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Anvil base -->
+  <path d="M12 44 L52 44 L48 52 L16 52 Z" fill="#3B6E8F" opacity="0.8"/>
+  <path d="M20 36 L44 36 L48 44 L12 44 Z" fill="#A0A4AE"/>
+  <!-- Anvil horn -->
+  <path d="M44 36 L56 32 L56 36 L44 36 Z" fill="#A0A4AE"/>
+  <!-- Spark/flame -->
+  <path d="M32 8 C28 16 22 20 22 26 C22 31.5 26.5 36 32 36 C37.5 36 42 31.5 42 26 C42 20 36 16 32 8Z" fill="#E8600A"/>
+  <path d="M32 14 C30 18 27 20 27 24 C27 26.8 29.2 29 32 29 C34.8 29 37 26.8 37 24 C37 20 34 18 32 14Z" fill="#F1C40F"/>
+</svg>

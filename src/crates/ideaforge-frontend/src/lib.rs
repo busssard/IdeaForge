@@ -1,0 +1,49 @@
+pub mod api;
+pub mod components;
+pub mod pages;
+pub mod state;
+
+use leptos::prelude::*;
+use leptos_router::components::*;
+use leptos_router::path;
+
+use components::layout::navbar::Navbar;
+use components::layout::footer::Footer;
+use pages::auth::LoginPage;
+use pages::auth::RegisterPage;
+use pages::browse::BrowsePage;
+use pages::create_idea::CreateIdeaPage;
+use pages::dashboard::DashboardPage;
+use pages::home::HomePage;
+use pages::idea_detail::IdeaDetailPage;
+use pages::not_found::NotFoundPage;
+use pages::profile::ProfilePage;
+use pages::settings::SettingsPage;
+use state::auth::AuthState;
+
+#[component]
+pub fn App() -> impl IntoView {
+    // Provide global auth state
+    let auth = AuthState::new();
+    provide_context(auth);
+
+    view! {
+        <Router>
+            <Navbar />
+            <main class="main-content">
+                <Routes fallback=|| view! { <NotFoundPage /> }>
+                    <Route path=path!("/") view=HomePage />
+                    <Route path=path!("/browse") view=BrowsePage />
+                    <Route path=path!("/login") view=LoginPage />
+                    <Route path=path!("/register") view=RegisterPage />
+                    <Route path=path!("/ideas/new") view=CreateIdeaPage />
+                    <Route path=path!("/ideas/:id") view=IdeaDetailPage />
+                    <Route path=path!("/dashboard") view=DashboardPage />
+                    <Route path=path!("/profile/:id") view=ProfilePage />
+                    <Route path=path!("/settings") view=SettingsPage />
+                </Routes>
+            </main>
+            <Footer />
+        </Router>
+    }
+}
