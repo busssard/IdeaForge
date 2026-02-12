@@ -19,17 +19,17 @@ use ideaforge_core::{
 pub fn routes() -> Router<AppState> {
     Router::new()
         // Task board (one per idea for MVP)
-        .route("/{id}/board", get(get_board).post(create_board).put(update_board))
+        .route("/:id/board", get(get_board).post(create_board).put(update_board))
         // Board tasks
-        .route("/{id}/board/tasks", get(list_tasks).post(create_task))
-        .route("/{id}/board/tasks/{tid}", get(get_task).put(update_task).delete(delete_task))
+        .route("/:id/board/tasks", get(list_tasks).post(create_task))
+        .route("/:id/board/tasks/:tid", get(get_task).put(update_task).delete(delete_task))
         // Team applications
-        .route("/{id}/team/apply", axum::routing::post(apply_to_team))
-        .route("/{id}/team/applications", get(list_applications))
-        .route("/{id}/team/applications/{aid}", put(review_application))
+        .route("/:id/team/apply", axum::routing::post(apply_to_team))
+        .route("/:id/team/applications", get(list_applications))
+        .route("/:id/team/applications/:aid", put(review_application))
         // Team members
-        .route("/{id}/team", get(list_team_members))
-        .route("/{id}/team/{uid}", delete(remove_team_member))
+        .route("/:id/team", get(list_team_members))
+        .route("/:id/team/:uid", delete(remove_team_member))
 }
 
 // =============================================================================

@@ -7,7 +7,7 @@ pub fn routes() -> Router<AppState> {
         .route("/", get(list_notifications))
         .route("/unread-count", get(unread_count))
         .route("/read-all", put(read_all))
-        .route("/{id}/read", put(mark_read))
+        .route("/:id/read", put(mark_read))
 }
 
 async fn list_notifications() -> &'static str {

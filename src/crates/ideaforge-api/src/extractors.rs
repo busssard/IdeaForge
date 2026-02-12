@@ -1,19 +1,101 @@
-//! Custom Axum extractors for authentication and authorization.
-//!
-//! Usage in handlers:
-//! ```rust,ignore
-//! async fn create_idea(
-//!     Auth(user): Auth,
-//!     Json(payload): Json<CreateIdeaRequest>,
-//! ) -> Result<Json<IdeaResponse>, ApiError> { ... }
-//! ```
+use async_trait::async_trait;
+use axum::{
+    extract::FromRequestParts,
+    http::{header::AUTHORIZATION, request::Parts, StatusCode},
+    response::{IntoResponse, Json, Response},
+};
+use serde_json::json;
+use uuid::Uuid;
 
-// TODO: Implement Auth extractor that:
-// 1. Reads Bearer token from Authorization header (or X-Api-Key for bots)
-// 2. Validates JWT / API key
-// 3. Returns authenticated user context
-//
-// TODO: Implement Permission extractor that:
-// 1. Takes Auth context
-// 2. Checks user roles against required permission
-// 3. Returns 403 if unauthorized
+/// Authenticated user extracted from Bearer token.
+/// Use this in handlers that require authentication.
+#[derive(Debug, Clone)]
+pub struct AuthUser {
+    pub user_id: Uuid,
+    pub email: String,
+    pub role: String,
+}
+
+/// Rejection type for auth extraction failures.
+pub struct AuthRejection {
+    message: &'static str,
+}
+
+impl IntoResponse for AuthRejection {
+    fn into_response(self) -> Response {
+        (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": {
+                    "code": "UNAUTHORIZED",
+                    "message": self.message,
+                }
+            })),
+        )
+            .into_response()
+    }
+}
+
+#[async_trait]
+impl FromRequestParts<crate::state::AppState> for AuthUser {
+    type Rejection = AuthRejection;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &crate::state::AppState,
+    ) -> Result<Self, Self::Rejection> {
+        let token = extract_bearer_token(parts).ok_or(AuthRejection {
+            message: "Missing or invalid Authorization header",
+        })?;
+
+        let claims = state.jwt.validate_token(&token).map_err(|_| AuthRejection {
+            message: "Invalid or expired token",
+        })?;
+
+        Ok(AuthUser {
+            user_id: claims.sub,
+            email: claims.email,
+            role: claims.role,
+        })
+    }
+}
+
+/// Optional authentication — returns `None` if no token is present,
+/// but rejects with 401 if a token IS present but invalid.
+#[derive(Debug, Clone)]
+pub struct OptionalAuth(pub Option<AuthUser>);
+
+#[async_trait]
+impl FromRequestParts<crate::state::AppState> for OptionalAuth {
+    type Rejection = AuthRejection;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &crate::state::AppState,
+    ) -> Result<Self, Self::Rejection> {
+        let token = match extract_bearer_token(parts) {
+            Some(t) => t,
+            None => return Ok(OptionalAuth(None)),
+        };
+
+        let claims = state.jwt.validate_token(&token).map_err(|_| AuthRejection {
+            message: "Invalid or expired token",
+        })?;
+
+        Ok(OptionalAuth(Some(AuthUser {
+            user_id: claims.sub,
+            email: claims.email,
+            role: claims.role,
+        })))
+    }
+}
+
+fn extract_bearer_token(parts: &Parts) -> Option<String> {
+    let header = parts.headers.get(AUTHORIZATION)?;
+    let value = header.to_str().ok()?;
+    let token = value.strip_prefix("Bearer ")?;
+    if token.is_empty() {
+        return None;
+    }
+    Some(token.to_string())
+}

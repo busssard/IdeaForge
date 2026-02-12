@@ -6,7 +6,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/register", post(register_agent))
         .route("/", get(list_agents))
-        .route("/{id}", get(get_agent).put(update_agent).delete(deactivate_agent))
+        .route("/:id", get(get_agent).put(update_agent).delete(deactivate_agent))
         .route("/{id}/rotate-key", post(rotate_key))
 }
 
