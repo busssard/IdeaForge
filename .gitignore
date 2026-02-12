@@ -9,9 +9,15 @@ target/
 .vscode/
 *.swp
 
+# Environment (secrets)
+.env
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Obsidian (personal workspace config)
+.obsidian/
 
 # LaTeX build artifacts
 *.aux
