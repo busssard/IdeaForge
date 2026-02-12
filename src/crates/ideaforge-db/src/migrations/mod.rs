@@ -5,6 +5,9 @@ mod m20260211_000002_create_categories;
 mod m20260211_000003_create_ideas;
 mod m20260211_000004_create_stokes;
 mod m20260211_000005_create_contributions;
+mod m20260212_000001_create_team_members;
+mod m20260212_000002_create_team_applications;
+mod m20260212_000003_create_subscriptions;
 
 pub struct Migrator;
 
@@ -17,6 +20,9 @@ impl MigratorTrait for Migrator {
             Box::new(m20260211_000003_create_ideas::Migration),
             Box::new(m20260211_000004_create_stokes::Migration),
             Box::new(m20260211_000005_create_contributions::Migration),
+            Box::new(m20260212_000001_create_team_members::Migration),
+            Box::new(m20260212_000002_create_team_applications::Migration),
+            Box::new(m20260212_000003_create_subscriptions::Migration),
         ]
     }
 }

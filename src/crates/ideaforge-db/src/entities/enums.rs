@@ -141,3 +141,98 @@ impl Default for ContributionKind {
         Self::Comment
     }
 }
+
+impl std::fmt::Display for ContributionKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Comment => write!(f, "comment"),
+            Self::Suggestion => write!(f, "suggestion"),
+            Self::Design => write!(f, "design"),
+            Self::Code => write!(f, "code"),
+            Self::Research => write!(f, "research"),
+            Self::Other => write!(f, "other"),
+        }
+    }
+}
+
+/// PostgreSQL enum: team_member_role
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "team_member_role")]
+pub enum TeamMemberRole {
+    #[sea_orm(string_value = "lead")]
+    Lead,
+    #[sea_orm(string_value = "builder")]
+    Builder,
+    #[sea_orm(string_value = "advisor")]
+    Advisor,
+}
+
+impl Default for TeamMemberRole {
+    fn default() -> Self {
+        Self::Builder
+    }
+}
+
+impl std::fmt::Display for TeamMemberRole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Lead => write!(f, "lead"),
+            Self::Builder => write!(f, "builder"),
+            Self::Advisor => write!(f, "advisor"),
+        }
+    }
+}
+
+impl TeamMemberRole {
+    pub fn from_str_opt(s: &str) -> Option<Self> {
+        match s {
+            "lead" => Some(Self::Lead),
+            "builder" => Some(Self::Builder),
+            "advisor" => Some(Self::Advisor),
+            _ => None,
+        }
+    }
+}
+
+/// PostgreSQL enum: application_status
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "application_status")]
+pub enum ApplicationStatus {
+    #[sea_orm(string_value = "pending")]
+    Pending,
+    #[sea_orm(string_value = "accepted")]
+    Accepted,
+    #[sea_orm(string_value = "rejected")]
+    Rejected,
+    #[sea_orm(string_value = "withdrawn")]
+    Withdrawn,
+}
+
+impl Default for ApplicationStatus {
+    fn default() -> Self {
+        Self::Pending
+    }
+}
+
+impl std::fmt::Display for ApplicationStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Pending => write!(f, "pending"),
+            Self::Accepted => write!(f, "accepted"),
+            Self::Rejected => write!(f, "rejected"),
+            Self::Withdrawn => write!(f, "withdrawn"),
+        }
+    }
+}
+
+impl ApplicationStatus {
+    pub fn from_str_opt(s: &str) -> Option<Self> {
+        match s {
+            "pending" => Some(Self::Pending),
+            "accepted" => Some(Self::Accepted),
+            "rejected" => Some(Self::Rejected),
+            "withdrawn" => Some(Self::Withdrawn),
+            _ => None,
+        }
+    }
+}
