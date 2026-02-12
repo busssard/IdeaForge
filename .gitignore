@@ -28,3 +28,6 @@ Thumbs.db
 
 # Generated pitch deck (regenerate from script)
 # deliverables/pitch-deck/IdeaForge_Pitch.pptx
+
+# Trunk build output
+dist/
