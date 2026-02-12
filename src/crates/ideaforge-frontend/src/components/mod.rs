@@ -11,3 +11,5 @@ pub mod comment_section;
 pub mod suggestion_section;
 pub mod team_panel;
 pub mod subscribe_button;
+pub mod share_buttons;
+pub mod visibility_badge;

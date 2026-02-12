@@ -6,10 +6,12 @@ use crate::api;
 use crate::components::comment_section::CommentSection;
 use crate::components::loading::Loading;
 use crate::components::maturity_badge::MaturityBadge;
+use crate::components::share_buttons::ShareButtons;
 use crate::components::stoke_button::StokeButton;
 use crate::components::subscribe_button::SubscribeButton;
 use crate::components::suggestion_section::SuggestionSection;
 use crate::components::team_panel::TeamPanel;
+use crate::components::visibility_badge::VisibilityBadge;
 
 #[component]
 pub fn IdeaDetailPage() -> impl IntoView {
@@ -26,13 +28,7 @@ pub fn IdeaDetailPage() -> impl IntoView {
                 idea.get().map(|result| {
                     match &*result {
                         Ok(idea) => {
-                            let openness_class = match idea.openness.as_str() {
-                                "open" => "badge badge-open",
-                                "collaborative" => "badge badge-collaborative",
-                                "commercial" => "badge badge-commercial",
-                                _ => "badge",
-                            };
-                            let openness_label = idea.openness.clone();
+                            let openness_for_badge = idea.openness.clone();
                             let created_date = idea
                                 .created_at
                                 .split('T')
@@ -53,6 +49,9 @@ pub fn IdeaDetailPage() -> impl IntoView {
                             let idea_id_subscribe = idea.id.clone();
                             let author_id_team = idea.author_id.clone();
                             let has_stoked = idea.has_stoked.unwrap_or(false);
+                            let share_url = format!("{}/ideas/{}", get_base_url(), idea.id);
+                            let share_title = idea.title.clone();
+                            let share_summary = idea.summary.clone();
 
                             view! {
                                 <div class="idea-detail">
@@ -60,7 +59,7 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                         <h1 class="idea-detail-title">{idea.title.clone()}</h1>
                                         <div class="idea-detail-badges">
                                             <MaturityBadge maturity=idea.maturity.clone() />
-                                            <span class=openness_class>{openness_label}</span>
+                                            <VisibilityBadge openness=openness_for_badge />
                                         </div>
                                         <div class="idea-detail-meta">
                                             <span>
@@ -90,6 +89,11 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                             initial_stoked=has_stoked
                                         />
                                         <SubscribeButton idea_id=idea_id_subscribe />
+                                        <ShareButtons
+                                            url=share_url
+                                            title=share_title
+                                            summary=share_summary
+                                        />
                                         <A href="/browse" attr:class="btn btn-ghost">
                                             "Back to Forge Floor"
                                         </A>
@@ -143,4 +147,10 @@ pub fn IdeaDetailPage() -> impl IntoView {
             }}
         </Suspense>
     }
+}
+
+fn get_base_url() -> String {
+    web_sys::window()
+        .and_then(|w| w.location().origin().ok())
+        .unwrap_or_else(|| "https://ideaforge.io".to_string())
 }
