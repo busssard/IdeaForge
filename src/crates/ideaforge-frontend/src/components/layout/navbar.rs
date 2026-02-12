@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use leptos_router::components::A;
+use leptos_router::hooks::use_navigate;
 
 use crate::state::auth::AuthState;
 
@@ -7,9 +8,10 @@ use crate::state::auth::AuthState;
 pub fn Navbar() -> impl IntoView {
     let auth = expect_context::<AuthState>();
     let is_logged_in = Memo::new(move |_| auth.is_authenticated());
-
     let logout = move |_| {
         auth.logout();
+        let navigate = use_navigate();
+        navigate("/", Default::default());
     };
 
     view! {

@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use leptos_router::components::A;
+use leptos_router::hooks::use_navigate;
 use web_sys::HtmlInputElement;
 
 use crate::api;
@@ -10,6 +11,7 @@ pub fn LoginPage() -> impl IntoView {
     let auth = expect_context::<AuthState>();
     let error = RwSignal::new(String::new());
     let loading = RwSignal::new(false);
+    let navigate = use_navigate();
 
     let email_ref = NodeRef::<leptos::html::Input>::new();
     let password_ref = NodeRef::<leptos::html::Input>::new();
@@ -37,15 +39,13 @@ pub fn LoginPage() -> impl IntoView {
         loading.set(true);
         error.set(String::new());
 
+        let navigate = navigate.clone();
         wasm_bindgen_futures::spawn_local(async move {
             match api::auth::login(email, password).await {
                 Ok(resp) => {
                     auth.set_from_token_response(&resp.user_id);
-                    // Load full user profile
                     auth.load_user().await;
-                    if let Some(window) = web_sys::window() {
-                        let _ = window.location().set_href("/dashboard");
-                    }
+                    navigate("/", Default::default());
                 }
                 Err(e) => {
                     error.set(e.message);
@@ -117,6 +117,7 @@ pub fn RegisterPage() -> impl IntoView {
     let auth = expect_context::<AuthState>();
     let error = RwSignal::new(String::new());
     let loading = RwSignal::new(false);
+    let navigate = use_navigate();
 
     let email_ref = NodeRef::<leptos::html::Input>::new();
     let password_ref = NodeRef::<leptos::html::Input>::new();
@@ -156,14 +157,13 @@ pub fn RegisterPage() -> impl IntoView {
 
         let role_opt = if role.is_empty() { None } else { Some(role) };
 
+        let navigate = navigate.clone();
         wasm_bindgen_futures::spawn_local(async move {
             match api::auth::register(email, password, display_name, role_opt).await {
                 Ok(resp) => {
                     auth.set_from_token_response(&resp.user_id);
                     auth.load_user().await;
-                    if let Some(window) = web_sys::window() {
-                        let _ = window.location().set_href("/dashboard");
-                    }
+                    navigate("/", Default::default());
                 }
                 Err(e) => {
                     error.set(e.message);

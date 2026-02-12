@@ -14,22 +14,27 @@ pub struct CurrentUser {
 #[derive(Debug, Clone, Copy)]
 pub struct AuthState {
     pub user: RwSignal<Option<CurrentUser>>,
+    /// True while we're checking a stored token on startup.
+    pub loading: RwSignal<bool>,
 }
 
 impl AuthState {
     pub fn new() -> Self {
         let user = RwSignal::new(None);
+        let has_token = client::get_token().is_some();
+        let loading = RwSignal::new(has_token);
+
+        let state = Self { user, loading };
 
         // If we have a token, try to load the user
-        if client::get_token().is_some() {
-            let state = Self { user };
+        if has_token {
             wasm_bindgen_futures::spawn_local(async move {
                 state.load_user().await;
+                state.loading.set(false);
             });
-            state
-        } else {
-            Self { user }
         }
+
+        state
     }
 
     pub fn is_authenticated(&self) -> bool {
@@ -58,11 +63,6 @@ impl AuthState {
     pub fn logout(&self) {
         client::clear_tokens();
         self.user.set(None);
-
-        // Navigate to home
-        if let Some(window) = web_sys::window() {
-            let _ = window.location().set_href("/");
-        }
     }
 
     pub async fn load_user(&self) {
