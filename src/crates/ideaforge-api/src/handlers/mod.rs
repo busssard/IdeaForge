@@ -6,3 +6,4 @@ pub mod users;
 pub mod notifications;
 pub mod search;
 pub mod health;
+pub mod subscriptions;

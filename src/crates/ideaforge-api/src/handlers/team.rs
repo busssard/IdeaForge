@@ -1,158 +1,528 @@
 //! Team formation handlers -- THE KILLER FEATURE.
 //!
-//! Provides task boards, team member management, and application
-//! workflows that let Entrepreneurs build teams around their ideas.
+//! Provides team member management and application workflows
+//! that let Entrepreneurs build teams around their ideas.
 
 use axum::{
-    extract::Path,
-    routing::{get, put, delete},
+    extract::{Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{delete, get, put},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::extractors::AuthUser;
 use crate::state::AppState;
-use ideaforge_core::{
-    BoardTaskStatus, TaskPriority, TeamMemberRole, TeamApplicationStatus,
-};
+use ideaforge_db::entities::enums::{ApplicationStatus, TeamMemberRole};
+use ideaforge_db::repositories::idea_repo::IdeaRepository;
+use ideaforge_db::repositories::team_repo::{TeamApplicationRepository, TeamMemberRepository};
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        // Task board (one per idea for MVP)
-        .route("/:id/board", get(get_board).post(create_board).put(update_board))
-        // Board tasks
-        .route("/:id/board/tasks", get(list_tasks).post(create_task))
-        .route("/:id/board/tasks/:tid", get(get_task).put(update_task).delete(delete_task))
-        // Team applications
         .route("/:id/team/apply", axum::routing::post(apply_to_team))
         .route("/:id/team/applications", get(list_applications))
         .route("/:id/team/applications/:aid", put(review_application))
-        // Team members
         .route("/:id/team", get(list_team_members))
         .route("/:id/team/:uid", delete(remove_team_member))
 }
 
-// =============================================================================
-// Task Board
-// =============================================================================
+// --- DTOs ---
 
-#[derive(Debug, Serialize)]
-pub struct BoardResponse {
-    pub id: Uuid,
-    pub idea_id: Uuid,
-    pub name: String,
-    pub description: String,
-    pub task_count: i32,
-    pub open_tasks: i32,
+#[derive(Debug, Deserialize)]
+pub struct ApplyRequest {
+    pub message: String,
 }
 
-async fn get_board(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: Get or 404 the task board for this idea
-    "get board"
+#[derive(Debug, Deserialize)]
+pub struct ReviewRequest {
+    pub accepted: bool,
 }
 
-async fn create_board(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: Create a task board (Entrepreneur only, one per idea)
-    "create board"
+#[derive(Debug, Deserialize)]
+pub struct ListApplicationsQuery {
+    pub status: Option<String>,
+    pub page: Option<u64>,
+    pub per_page: Option<u64>,
 }
-
-async fn update_board(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: Update board metadata (name, description)
-    "update board"
-}
-
-// =============================================================================
-// Board Tasks
-// =============================================================================
-
-#[derive(Debug, Serialize)]
-pub struct TaskResponse {
-    pub id: Uuid,
-    pub title: String,
-    pub description: String,
-    pub status: BoardTaskStatus,
-    pub assignee_id: Option<Uuid>,
-    pub skill_tags: Vec<String>,
-    pub priority: TaskPriority,
-}
-
-async fn list_tasks(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: List all tasks for the idea's board, with filtering
-    "list tasks"
-}
-
-async fn create_task(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: Create a task on the board (Entrepreneur or team lead only)
-    "create task"
-}
-
-async fn get_task(Path((_id, _tid)): Path<(Uuid, Uuid)>) -> &'static str {
-    // TODO: Get a single task
-    "get task"
-}
-
-async fn update_task(Path((_id, _tid)): Path<(Uuid, Uuid)>) -> &'static str {
-    // TODO: Update task (status, assignee, details)
-    // Team members can claim/unclaim tasks
-    // Lead can assign tasks and change details
-    "update task"
-}
-
-async fn delete_task(Path((_id, _tid)): Path<(Uuid, Uuid)>) -> &'static str {
-    // TODO: Delete a task (Entrepreneur only)
-    "delete task"
-}
-
-// =============================================================================
-// Team Applications
-// =============================================================================
 
 #[derive(Debug, Serialize)]
 pub struct ApplicationResponse {
     pub id: Uuid,
+    pub idea_id: Uuid,
     pub user_id: Uuid,
-    pub user_display_name: String,
-    pub role: TeamMemberRole,
-    pub pitch: String,
-    pub status: TeamApplicationStatus,
+    pub message: String,
+    pub status: String,
+    pub reviewed_by: Option<Uuid>,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
-async fn apply_to_team(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: Submit application (Maker role required)
-    // One application per user per idea
-    "apply to team"
+#[derive(Debug, Serialize)]
+pub struct ApplicationListResponse {
+    pub data: Vec<ApplicationResponse>,
+    pub meta: PaginationMeta,
 }
-
-async fn list_applications(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: List applications (Entrepreneur/lead only)
-    "list applications"
-}
-
-async fn review_application(Path((_id, _aid)): Path<(Uuid, Uuid)>) -> &'static str {
-    // TODO: Accept or reject an application (Entrepreneur/lead only)
-    // Accepting creates a TeamMember record and sends notification
-    "review application"
-}
-
-// =============================================================================
-// Team Members
-// =============================================================================
 
 #[derive(Debug, Serialize)]
 pub struct TeamMemberResponse {
     pub id: Uuid,
+    pub idea_id: Uuid,
     pub user_id: Uuid,
-    pub user_display_name: String,
-    pub role: TeamMemberRole,
+    pub role: String,
     pub joined_at: String,
 }
 
-async fn list_team_members(Path(_id): Path<Uuid>) -> &'static str {
-    // TODO: List all active team members for an idea
-    "list team members"
+#[derive(Debug, Serialize)]
+pub struct TeamListResponse {
+    pub data: Vec<TeamMemberResponse>,
 }
 
-async fn remove_team_member(Path((_id, _uid)): Path<(Uuid, Uuid)>) -> &'static str {
-    // TODO: Remove a team member (Entrepreneur/lead only)
-    "remove team member"
+#[derive(Debug, Serialize)]
+pub struct PaginationMeta {
+    pub total: u64,
+    pub page: u64,
+    pub per_page: u64,
+    pub total_pages: u64,
+}
+
+fn err(status: StatusCode, code: &str, message: &str) -> impl IntoResponse {
+    (
+        status,
+        Json(serde_json::json!({
+            "error": { "code": code, "message": message }
+        })),
+    )
+        .into_response()
+}
+
+// --- Handlers ---
+
+async fn apply_to_team(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(id): Path<Uuid>,
+    Json(body): Json<ApplyRequest>,
+) -> impl IntoResponse {
+    // Validate message
+    let message = body.message.trim();
+    if message.is_empty() {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Message is required",
+        )
+        .into_response();
+    }
+    if message.len() > 2000 {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Message must be at most 2000 characters",
+        )
+        .into_response();
+    }
+
+    // Check idea exists
+    let idea_repo = IdeaRepository::new(state.db.connection());
+    let idea = match idea_repo.find_by_id(id).await {
+        Ok(Some(idea)) => idea,
+        Ok(None) => {
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to find idea: {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response();
+        }
+    };
+
+    // Cannot apply to own idea
+    if idea.author_id == auth.user_id {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Cannot apply to your own idea",
+        )
+        .into_response();
+    }
+
+    // Check if already applied (pending or accepted)
+    let app_repo = TeamApplicationRepository::new(state.db.connection());
+    match app_repo.exists(auth.user_id, id).await {
+        Ok(true) => {
+            return err(
+                StatusCode::CONFLICT,
+                "CONFLICT",
+                "You already have an active application for this idea",
+            )
+            .into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to check application existence: {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response();
+        }
+        Ok(false) => {}
+    }
+
+    // Check if already a team member
+    let member_repo = TeamMemberRepository::new(state.db.connection());
+    match member_repo.exists(auth.user_id, id).await {
+        Ok(true) => {
+            return err(
+                StatusCode::CONFLICT,
+                "CONFLICT",
+                "You are already a team member",
+            )
+            .into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to check team membership: {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response();
+        }
+        Ok(false) => {}
+    }
+
+    match app_repo
+        .create(Uuid::new_v4(), id, auth.user_id, message)
+        .await
+    {
+        Ok(app) => (
+            StatusCode::CREATED,
+            Json(ApplicationResponse {
+                id: app.id,
+                idea_id: app.idea_id,
+                user_id: app.user_id,
+                message: app.message,
+                status: app.status.to_string(),
+                reviewed_by: app.reviewed_by,
+                created_at: app.created_at.to_rfc3339(),
+                updated_at: app.updated_at.to_rfc3339(),
+            }),
+        )
+            .into_response(),
+        Err(e) => {
+            tracing::error!("Failed to create application: {e}");
+            err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response()
+        }
+    }
+}
+
+async fn list_applications(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(id): Path<Uuid>,
+    Query(params): Query<ListApplicationsQuery>,
+) -> impl IntoResponse {
+    // Verify caller is idea author
+    let idea_repo = IdeaRepository::new(state.db.connection());
+    match idea_repo.find_by_id(id).await {
+        Ok(Some(idea)) if idea.author_id == auth.user_id => {}
+        Ok(Some(_)) => {
+            return err(
+                StatusCode::FORBIDDEN,
+                "FORBIDDEN",
+                "Only the idea author can view applications",
+            )
+            .into_response()
+        }
+        Ok(None) => {
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to find idea: {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response();
+        }
+    }
+
+    let page = params.page.unwrap_or(1).max(1);
+    let per_page = params.per_page.unwrap_or(20).clamp(1, 100);
+    let status_filter = params
+        .status
+        .as_deref()
+        .and_then(ApplicationStatus::from_str_opt);
+
+    let app_repo = TeamApplicationRepository::new(state.db.connection());
+    match app_repo
+        .list_for_idea(id, status_filter, page, per_page)
+        .await
+    {
+        Ok((apps, total)) => {
+            let total_pages = if total == 0 {
+                0
+            } else {
+                (total + per_page - 1) / per_page
+            };
+            Json(ApplicationListResponse {
+                data: apps
+                    .iter()
+                    .map(|a| ApplicationResponse {
+                        id: a.id,
+                        idea_id: a.idea_id,
+                        user_id: a.user_id,
+                        message: a.message.clone(),
+                        status: a.status.to_string(),
+                        reviewed_by: a.reviewed_by,
+                        created_at: a.created_at.to_rfc3339(),
+                        updated_at: a.updated_at.to_rfc3339(),
+                    })
+                    .collect(),
+                meta: PaginationMeta {
+                    total,
+                    page,
+                    per_page,
+                    total_pages,
+                },
+            })
+            .into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to list applications: {e}");
+            err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response()
+        }
+    }
+}
+
+async fn review_application(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path((id, aid)): Path<(Uuid, Uuid)>,
+    Json(body): Json<ReviewRequest>,
+) -> impl IntoResponse {
+    // Verify caller is idea author
+    let idea_repo = IdeaRepository::new(state.db.connection());
+    match idea_repo.find_by_id(id).await {
+        Ok(Some(idea)) if idea.author_id == auth.user_id => {}
+        Ok(Some(_)) => {
+            return err(
+                StatusCode::FORBIDDEN,
+                "FORBIDDEN",
+                "Only the idea author can review applications",
+            )
+            .into_response()
+        }
+        Ok(None) => {
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to find idea: {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response();
+        }
+    }
+
+    // Find the application
+    let app_repo = TeamApplicationRepository::new(state.db.connection());
+    let application = match app_repo.find_by_id(aid).await {
+        Ok(Some(app)) if app.idea_id == id => app,
+        Ok(Some(_)) => {
+            return err(
+                StatusCode::NOT_FOUND,
+                "NOT_FOUND",
+                "Application not found for this idea",
+            )
+            .into_response()
+        }
+        Ok(None) => {
+            return err(
+                StatusCode::NOT_FOUND,
+                "NOT_FOUND",
+                "Application not found",
+            )
+            .into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to find application: {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response();
+        }
+    };
+
+    // Check application is still pending
+    if application.status != ApplicationStatus::Pending {
+        return err(
+            StatusCode::CONFLICT,
+            "CONFLICT",
+            "Application has already been reviewed",
+        )
+        .into_response();
+    }
+
+    let new_status = if body.accepted {
+        ApplicationStatus::Accepted
+    } else {
+        ApplicationStatus::Rejected
+    };
+
+    // If accepted, create team member first
+    if body.accepted {
+        let member_repo = TeamMemberRepository::new(state.db.connection());
+        if let Err(e) = member_repo
+            .create(
+                Uuid::new_v4(),
+                id,
+                application.user_id,
+                TeamMemberRole::Builder,
+            )
+            .await
+        {
+            tracing::error!("Failed to create team member: {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response();
+        }
+    }
+
+    // Update application status
+    match app_repo
+        .update_status(aid, new_status, auth.user_id)
+        .await
+    {
+        Ok(app) => Json(ApplicationResponse {
+            id: app.id,
+            idea_id: app.idea_id,
+            user_id: app.user_id,
+            message: app.message,
+            status: app.status.to_string(),
+            reviewed_by: app.reviewed_by,
+            created_at: app.created_at.to_rfc3339(),
+            updated_at: app.updated_at.to_rfc3339(),
+        })
+        .into_response(),
+        Err(e) => {
+            tracing::error!("Failed to update application status: {e}");
+            err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response()
+        }
+    }
+}
+
+async fn list_team_members(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    let member_repo = TeamMemberRepository::new(state.db.connection());
+    match member_repo.list_for_idea(id).await {
+        Ok(members) => Json(TeamListResponse {
+            data: members
+                .iter()
+                .map(|m| TeamMemberResponse {
+                    id: m.id,
+                    idea_id: m.idea_id,
+                    user_id: m.user_id,
+                    role: m.role.to_string(),
+                    joined_at: m.joined_at.to_rfc3339(),
+                })
+                .collect(),
+        })
+        .into_response(),
+        Err(e) => {
+            tracing::error!("Failed to list team members: {e}");
+            err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response()
+        }
+    }
+}
+
+async fn remove_team_member(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path((id, uid)): Path<(Uuid, Uuid)>,
+) -> impl IntoResponse {
+    // Verify caller is idea author
+    let idea_repo = IdeaRepository::new(state.db.connection());
+    match idea_repo.find_by_id(id).await {
+        Ok(Some(idea)) if idea.author_id == auth.user_id => {}
+        Ok(Some(_)) => {
+            return err(
+                StatusCode::FORBIDDEN,
+                "FORBIDDEN",
+                "Only the idea author can remove team members",
+            )
+            .into_response()
+        }
+        Ok(None) => {
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to find idea: {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response();
+        }
+    }
+
+    let member_repo = TeamMemberRepository::new(state.db.connection());
+    match member_repo.remove(id, uid).await {
+        Ok(result) if result.rows_affected == 0 => {
+            err(
+                StatusCode::NOT_FOUND,
+                "NOT_FOUND",
+                "Team member not found",
+            )
+            .into_response()
+        }
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => {
+            tracing::error!("Failed to remove team member: {e}");
+            err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response()
+        }
+    }
 }
