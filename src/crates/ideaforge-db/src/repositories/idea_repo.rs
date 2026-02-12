@@ -54,6 +54,7 @@ impl<'a> IdeaRepository<'a> {
         maturity: Option<IdeaMaturity>,
         openness: Option<IdeaOpenness>,
         category_id: Option<Uuid>,
+        author_id: Option<Uuid>,
         page: u64,
         per_page: u64,
     ) -> Result<(Vec<idea::Model>, u64), DbErr> {
@@ -67,6 +68,9 @@ impl<'a> IdeaRepository<'a> {
         }
         if let Some(cid) = category_id {
             query = query.filter(idea::Column::CategoryId.eq(cid));
+        }
+        if let Some(aid) = author_id {
+            query = query.filter(idea::Column::AuthorId.eq(aid));
         }
 
         query = query.order_by_desc(idea::Column::CreatedAt);

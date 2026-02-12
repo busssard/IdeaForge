@@ -34,6 +34,7 @@ pub struct ListIdeasQuery {
     pub category_id: Option<Uuid>,
     pub maturity: Option<String>,
     pub openness: Option<String>,
+    pub author_id: Option<Uuid>,
     pub page: Option<u64>,
     pub per_page: Option<u64>,
 }
@@ -133,18 +134,6 @@ pub struct ContributionListResponse {
     pub meta: PaginationMeta,
 }
 
-#[derive(Debug, Serialize)]
-pub struct MyStokedIdeasResponse {
-    pub data: Vec<StokedIdeaEntry>,
-    pub meta: PaginationMeta,
-}
-
-#[derive(Debug, Serialize)]
-pub struct StokedIdeaEntry {
-    pub idea_id: Uuid,
-    pub stoked_at: String,
-}
-
 fn err(status: StatusCode, code: &str, message: &str) -> impl IntoResponse {
     (
         status,
@@ -203,6 +192,7 @@ async fn list_ideas(
             maturity_filter,
             openness_filter,
             params.category_id,
+            params.author_id,
             page,
             per_page,
         )
@@ -793,50 +783,81 @@ async fn list_my_stoked_ideas(
     let page = params.page.unwrap_or(1).max(1);
     let per_page = params.per_page.unwrap_or(20).clamp(1, 100);
 
+    // Get stoked idea IDs with pagination
     let query = stoke::Entity::find()
         .filter(stoke::Column::UserId.eq(auth.user_id))
         .order_by_desc(stoke::Column::CreatedAt);
 
     let paginator = query.paginate(state.db.connection(), per_page);
-    match paginator.num_items().await {
-        Ok(total) => match paginator.fetch_page(page.saturating_sub(1)).await {
-            Ok(stokes) => {
-                let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
-                Json(MyStokedIdeasResponse {
-                    data: stokes
-                        .iter()
-                        .map(|s| StokedIdeaEntry {
-                            idea_id: s.idea_id,
-                            stoked_at: s.created_at.to_rfc3339(),
-                        })
-                        .collect(),
-                    meta: PaginationMeta {
-                        total,
-                        page,
-                        per_page,
-                        total_pages,
-                    },
-                })
-                .into_response()
-            }
-            Err(e) => {
-                tracing::error!("Failed to list my stoked ideas: {e}");
-                err(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "INTERNAL_ERROR",
-                    "Internal server error",
-                )
-                .into_response()
-            }
-        },
+    let total = match paginator.num_items().await {
+        Ok(t) => t,
         Err(e) => {
             tracing::error!("Failed to count my stoked ideas: {e}");
-            err(
+            return err(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "INTERNAL_ERROR",
                 "Internal server error",
             )
-            .into_response()
+            .into_response();
         }
-    }
+    };
+
+    let stokes = match paginator.fetch_page(page.saturating_sub(1)).await {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::error!("Failed to list my stoked ideas: {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response();
+        }
+    };
+
+    // Fetch the full idea models for these stoked IDs
+    let idea_ids: Vec<Uuid> = stokes.iter().map(|s| s.idea_id).collect();
+    let ideas = if idea_ids.is_empty() {
+        vec![]
+    } else {
+        use ideaforge_db::entities::idea;
+        match idea::Entity::find()
+            .filter(idea::Column::Id.is_in(idea_ids.clone()))
+            .filter(idea::Column::ArchivedAt.is_null())
+            .all(state.db.connection())
+            .await
+        {
+            Ok(ideas) => {
+                // Preserve stoke order
+                let idea_map: std::collections::HashMap<Uuid, _> =
+                    ideas.into_iter().map(|i| (i.id, i)).collect();
+                idea_ids
+                    .iter()
+                    .filter_map(|id| idea_map.get(id))
+                    .cloned()
+                    .collect()
+            }
+            Err(e) => {
+                tracing::error!("Failed to fetch stoked ideas: {e}");
+                return err(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "INTERNAL_ERROR",
+                    "Internal server error",
+                )
+                .into_response();
+            }
+        }
+    };
+
+    let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
+    Json(IdeaListResponse {
+        data: ideas.iter().map(|i| idea_response(i, true)).collect(),
+        meta: PaginationMeta {
+            total,
+            page,
+            per_page,
+            total_pages,
+        },
+    })
+    .into_response()
 }

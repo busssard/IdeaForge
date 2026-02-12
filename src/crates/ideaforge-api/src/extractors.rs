@@ -60,8 +60,9 @@ impl FromRequestParts<crate::state::AppState> for AuthUser {
     }
 }
 
-/// Optional authentication — returns `None` if no token is present,
-/// but rejects with 401 if a token IS present but invalid.
+/// Optional authentication — returns `Some(AuthUser)` if a valid token
+/// is present, `None` otherwise. Never rejects — invalid/expired tokens
+/// are silently treated as unauthenticated so public endpoints keep working.
 #[derive(Debug, Clone)]
 pub struct OptionalAuth(pub Option<AuthUser>);
 
@@ -78,15 +79,14 @@ impl FromRequestParts<crate::state::AppState> for OptionalAuth {
             None => return Ok(OptionalAuth(None)),
         };
 
-        let claims = state.jwt.validate_token(&token).map_err(|_| AuthRejection {
-            message: "Invalid or expired token",
-        })?;
-
-        Ok(OptionalAuth(Some(AuthUser {
-            user_id: claims.sub,
-            email: claims.email,
-            role: claims.role,
-        })))
+        match state.jwt.validate_token(&token) {
+            Ok(claims) => Ok(OptionalAuth(Some(AuthUser {
+                user_id: claims.sub,
+                email: claims.email,
+                role: claims.role,
+            }))),
+            Err(_) => Ok(OptionalAuth(None)),
+        }
     }
 }
 
