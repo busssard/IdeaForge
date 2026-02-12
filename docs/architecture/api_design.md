@@ -1,5 +1,17 @@
 # IdeaForge - API Design
 
+## Table of Contents
+
+1. [Overview](#Overview)
+2. [1. Authentication & Authorization](#1.%20Authentication%20&%20Authorization)
+3. [2. API Endpoints by Domain](#2.%20API%20Endpoints%20by%20Domain)
+4. [3. AI Agent API](#3.%20AI%20Agent%20API)
+5. [4. WebSocket Design](#4.%20WebSocket%20Design)
+6. [5. Rate Limiting](#5.%20Rate%20Limiting)
+7. [6. Error Response Format](#6.%20Error%20Response%20Format)
+8. [7. Pagination](#7.%20Pagination)
+9. [8. Cross-References](#8.%20Cross-References)
+
 ## Overview
 
 RESTful JSON API built with Axum. All endpoints are prefixed with `/api/v1/`. WebSocket connections are available at `/ws/`.

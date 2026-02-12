@@ -4,6 +4,18 @@
 
 PostgreSQL is chosen for its JSONB support (flexible idea metadata), row-level security, full-text search fallback, and mature Rust driver ecosystem (SeaORM / SQLx).
 
+## Table of Contents
+
+1. [1. Entity-Relationship Diagram](#1.%20Entity-Relationship%20Diagram)
+2. [2. Core Tables](#2.%20Core%20Tables)
+3. [3. Role & Permission Model](#3.%20Role%20&%20Permission%20Model)
+4. [4. Bot/Human Distinction (Separate Approval Tracks)](#4.%20Bot/Human%20Distinction%20(Separate%20Approval%20Tracks))
+5. [5. Idea Maturity State Machine](#5.%20Idea%20Maturity%20State%20Machine)
+6. [5b. Secret Idea Storage Architecture](#5b.%20Secret%20Idea%20Storage%20Architecture)
+7. [6. Indexing Strategy](#6.%20Indexing%20Strategy)
+8. [7. Migration Strategy](#7.%20Migration%20Strategy)
+9. [8. Cross-References](#8.%20Cross-References)
+
 ---
 
 ## 1. Entity-Relationship Diagram

@@ -1,5 +1,14 @@
 # IdeaForge - System Architecture Overview
 
+## Table of Contents
+
+1. [1. Architecture Style: Modular Monolith in Rust](#1.%20Architecture%20Style:%20Modular%20Monolith%20in%20Rust)
+2. [2. Component Diagram](#2.%20Component%20Diagram)
+3. [3. Technology Stack](#3.%20Technology%20Stack)
+4. [4. Deployment Strategy](#4.%20Deployment%20Strategy)
+5. [5. Module Boundaries (Crate Map)](#5.%20Module%20Boundaries%20(Crate%20Map))
+6. [6. Cross-References](#6.%20Cross-References)
+
 ## 1. Architecture Style: Modular Monolith in Rust
 
 IdeaForge adopts a **modular monolith** architecture for the MVP, with clear module boundaries designed for future microservice extraction.

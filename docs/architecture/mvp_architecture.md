@@ -4,6 +4,20 @@
 > (system_overview.md, database_schema.md, etc.) represent the long-term vision.
 > This MVP is scoped for **2-3 Rust engineers shipping in 4 months**.
 
+## Table of Contents
+
+1. [1. Guiding Principles](#1.%20Guiding%20Principles)
+2. [2. MVP Scope Summary](#2.%20MVP%20Scope%20Summary)
+3. [3. MVP Component Diagram](#3.%20MVP%20Component%20Diagram)
+4. [4. Simplified Domain Model](#4.%20Simplified%20Domain%20Model)
+5. [5. Team Formation -- The Killer Feature](#5.%20Team%20Formation%20--%20The%20Killer%20Feature)
+6. [6. MVP Crate Map](#6.%20MVP%20Crate%20Map)
+7. [7. MVP Auth Flow](#7.%20MVP%20Auth%20Flow)
+8. [8. MVP API Endpoints (Complete)](#8.%20MVP%20API%20Endpoints%20(Complete))
+9. [9. MVP Deployment](#9.%20MVP%20Deployment)
+10. [10. Phase Roadmap (Architecture)](#10.%20Phase%20Roadmap%20(Architecture))
+11. [11. Cross-References](#11.%20Cross-References)
+
 ---
 
 ## 1. Guiding Principles

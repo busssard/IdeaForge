@@ -1,5 +1,19 @@
 # IdeaForge - Cardano Blockchain Integration
 
+## Table of Contents
+
+1. [Overview](#Overview)
+2. [1. Architecture](#1.%20Architecture)
+3. [2. Smart Contract Design (Aiken)](#2.%20Smart%20Contract%20Design%20(Aiken))
+4. [3. Wallet Integration (CIP-30)](#3.%20Wallet%20Integration%20(CIP-30))
+5. [4. Transaction Flows](#4.%20Transaction%20Flows)
+6. [5. Rust Backend Implementation](#5.%20Rust%20Backend%20Implementation)
+7. [6. Security Considerations](#6.%20Security%20Considerations)
+8. [7. Smart Contract Audit Pipeline](#7.%20Smart%20Contract%20Audit%20Pipeline)
+9. [8. Pledge as Pre-Order (Securities Law Compliance)](#8.%20Pledge%20as%20Pre-Order%20(Securities%20Law%20Compliance))
+10. [9. Testnet-First Strategy](#9.%20Testnet-First%20Strategy)
+11. [10. Cross-References](#10.%20Cross-References)
+
 ## Overview
 
 IdeaForge integrates with the Cardano blockchain for pledge-to-buy mechanics. Smart contracts hold pledged funds in escrow until either the idea's product is delivered (funds release to creators) or the pledge window expires (funds return to pledgers).

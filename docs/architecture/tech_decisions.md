@@ -1,5 +1,19 @@
 # IdeaForge - Architecture Decision Records (ADRs)
 
+## Table of Contents
+
+1. [ADR-001: Primary Language - Rust](#ADR-001:%20Primary%20Language%20-%20Rust)
+2. [ADR-002: Database - PostgreSQL](#ADR-002:%20Database%20-%20PostgreSQL)
+3. [ADR-003: Web Framework - Axum](#ADR-003:%20Web%20Framework%20-%20Axum)
+4. [ADR-004: ORM - SeaORM](#ADR-004:%20ORM%20-%20SeaORM)
+5. [ADR-005: Frontend - Leptos (Full-Stack Rust)](#ADR-005:%20Frontend%20-%20Leptos%20(Full-Stack%20Rust))
+6. [ADR-006: Search Engine - Tantivy (Embedded)](#ADR-006:%20Search%20Engine%20-%20Tantivy%20(Embedded))
+7. [ADR-007: Event System - NATS](#ADR-007:%20Event%20System%20-%20NATS)
+8. [ADR-008: Authentication - JWT + OAuth2](#ADR-008:%20Authentication%20-%20JWT%20+%20OAuth2)
+9. [ADR-009: Deployment - Docker + Compose (MVP)](#ADR-009:%20Deployment%20-%20Docker%20+%20Compose%20(MVP))
+10. [ADR-010: Fiat Payments - Stripe](#ADR-010:%20Fiat%20Payments%20-%20Stripe)
+11. [Cross-References](#Cross-References)
+
 ---
 
 ## ADR-001: Primary Language - Rust

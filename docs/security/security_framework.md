@@ -1,5 +1,18 @@
 # IdeaForge Security Framework (MVP)
 
+## Table of Contents
+
+1. [Executive Summary](#Executive%20Summary)
+2. [1. What the MVP Does NOT Have (Deferred Security)](#1.%20What%20the%20MVP%20Does%20NOT%20Have%20(Deferred%20Security))
+3. [2. MVP Authentication](#2.%20MVP%20Authentication)
+4. [3. MVP Authorization](#3.%20MVP%20Authorization)
+5. [4. MVP API Security](#4.%20MVP%20API%20Security)
+6. [5. MVP Data Protection](#5.%20MVP%20Data%20Protection)
+7. [6. MVP Infrastructure Security](#6.%20MVP%20Infrastructure%20Security)
+8. [7. Security Checklist Before Launch](#7.%20Security%20Checklist%20Before%20Launch)
+9. [8. Security Roadmap (Post-MVP)](#8.%20Security%20Roadmap%20(Post-MVP))
+10. [9. Key Risks and Mitigations (MVP)](#9.%20Key%20Risks%20and%20Mitigations%20(MVP))
+
 ## Executive Summary
 
 The MVP has a radically simplified security posture. There are no secret ideas, no financial transactions, no smart contracts, no crypto wallets, and no AI agent API. The attack surface is a standard web application with user accounts, public content, and social features (posting, commenting, voting).

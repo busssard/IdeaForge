@@ -1,5 +1,18 @@
 # IdeaForge Intellectual Property Protection
 
+## Table of Contents
+
+1. [Executive Summary](#Executive%20Summary)
+2. [1. Idea Openness Levels](#1.%20Idea%20Openness%20Levels)
+3. [2. Handling Secret Ideas Securely](#2.%20Handling%20Secret%20Ideas%20Securely)
+4. [3. NDA-Like Mechanisms](#3.%20NDA-Like%20Mechanisms)
+5. [4. Timestamping and Proof of Priority](#4.%20Timestamping%20and%20Proof%20of%20Priority)
+6. [5. IP Lawyer Integration Workflow](#5.%20IP%20Lawyer%20Integration%20Workflow)
+7. [6. Data Compartmentalization for Secret Ideas](#6.%20Data%20Compartmentalization%20for%20Secret%20Ideas)
+8. [7. AI-Generated IP Considerations](#7.%20AI-Generated%20IP%20Considerations)
+9. [8. Architecture Alignment Notes (Updated Cross-Review Round 2)](#8.%20Architecture%20Alignment%20Notes%20(Updated%20Cross-Review%20Round%202))
+10. [9. Key Risks & Mitigations](#9.%20Key%20Risks%20&%20Mitigations)
+
 ## Executive Summary
 
 Intellectual property protection is a core differentiator for IdeaForge. The platform must handle three openness levels -- open source, commercial, and secret -- with the "secret" level requiring the most rigorous security. This document defines mechanisms for protecting ideas, establishing priority, integrating legal services, and compartmentalizing sensitive data.
