@@ -1,10 +1,11 @@
-use ideaforge_core::{Idea, IdeaMaturity, IdeaOpenness};
-use sea_orm::DatabaseConnection;
+use sea_orm::*;
 use uuid::Uuid;
 
-/// Repository for idea-related database operations.
+use crate::entities::enums::{IdeaMaturity, IdeaOpenness};
+use crate::entities::idea;
+
 pub struct IdeaRepository<'a> {
-    db: &'a DatabaseConnection,
+    pub db: &'a DatabaseConnection,
 }
 
 impl<'a> IdeaRepository<'a> {
@@ -12,21 +13,126 @@ impl<'a> IdeaRepository<'a> {
         Self { db }
     }
 
-    /// Find an idea by its UUID.
-    pub async fn find_by_id(&self, _id: Uuid) -> Result<Option<Idea>, sea_orm::DbErr> {
-        // TODO: Implement once entities are generated
-        todo!("Implement after running sea-orm-cli generate entity")
+    pub async fn create(
+        &self,
+        id: Uuid,
+        author_id: Uuid,
+        title: &str,
+        summary: &str,
+        description: &str,
+        maturity: IdeaMaturity,
+        openness: IdeaOpenness,
+        category_id: Option<Uuid>,
+    ) -> Result<idea::Model, DbErr> {
+        let now = chrono::Utc::now().fixed_offset();
+        let model = idea::ActiveModel {
+            id: Set(id),
+            author_id: Set(author_id),
+            title: Set(title.to_string()),
+            summary: Set(summary.to_string()),
+            description: Set(description.to_string()),
+            maturity: Set(maturity),
+            openness: Set(openness),
+            category_id: Set(category_id),
+            stoke_count: Set(0),
+            created_at: Set(now),
+            updated_at: Set(now),
+            archived_at: Set(None),
+        };
+        model.insert(self.db).await
     }
 
-    /// List ideas with filtering and pagination.
+    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<idea::Model>, DbErr> {
+        idea::Entity::find_by_id(id)
+            .filter(idea::Column::ArchivedAt.is_null())
+            .one(self.db)
+            .await
+    }
+
     pub async fn list(
         &self,
-        _maturity: Option<IdeaMaturity>,
-        _openness: Option<IdeaOpenness>,
-        _category_slug: Option<&str>,
-        _page: u64,
-        _per_page: u64,
-    ) -> Result<(Vec<Idea>, u64), sea_orm::DbErr> {
-        todo!("Implement after running sea-orm-cli generate entity")
+        maturity: Option<IdeaMaturity>,
+        openness: Option<IdeaOpenness>,
+        category_id: Option<Uuid>,
+        page: u64,
+        per_page: u64,
+    ) -> Result<(Vec<idea::Model>, u64), DbErr> {
+        let mut query = idea::Entity::find().filter(idea::Column::ArchivedAt.is_null());
+
+        if let Some(m) = maturity {
+            query = query.filter(idea::Column::Maturity.eq(m));
+        }
+        if let Some(o) = openness {
+            query = query.filter(idea::Column::Openness.eq(o));
+        }
+        if let Some(cid) = category_id {
+            query = query.filter(idea::Column::CategoryId.eq(cid));
+        }
+
+        query = query.order_by_desc(idea::Column::CreatedAt);
+
+        let paginator = query.paginate(self.db, per_page);
+        let total = paginator.num_items().await?;
+        let items = paginator.fetch_page(page.saturating_sub(1)).await?;
+
+        Ok((items, total))
+    }
+
+    pub async fn update(
+        &self,
+        id: Uuid,
+        title: Option<&str>,
+        summary: Option<&str>,
+        description: Option<&str>,
+        openness: Option<IdeaOpenness>,
+        category_id: Option<Option<Uuid>>,
+    ) -> Result<idea::Model, DbErr> {
+        let model = idea::Entity::find_by_id(id)
+            .one(self.db)
+            .await?
+            .ok_or(DbErr::RecordNotFound("Idea not found".to_string()))?;
+
+        let mut active: idea::ActiveModel = model.into();
+        if let Some(t) = title {
+            active.title = Set(t.to_string());
+        }
+        if let Some(s) = summary {
+            active.summary = Set(s.to_string());
+        }
+        if let Some(d) = description {
+            active.description = Set(d.to_string());
+        }
+        if let Some(o) = openness {
+            active.openness = Set(o);
+        }
+        if let Some(cid) = category_id {
+            active.category_id = Set(cid);
+        }
+        active.updated_at = Set(chrono::Utc::now().fixed_offset());
+        active.update(self.db).await
+    }
+
+    pub async fn archive(&self, id: Uuid) -> Result<idea::Model, DbErr> {
+        let model = idea::Entity::find_by_id(id)
+            .one(self.db)
+            .await?
+            .ok_or(DbErr::RecordNotFound("Idea not found".to_string()))?;
+
+        let mut active: idea::ActiveModel = model.into();
+        active.archived_at = Set(Some(chrono::Utc::now().fixed_offset()));
+        active.updated_at = Set(chrono::Utc::now().fixed_offset());
+        active.update(self.db).await
+    }
+
+    pub async fn update_stoke_count(&self, idea_id: Uuid, count: i32) -> Result<(), DbErr> {
+        let model = idea::Entity::find_by_id(idea_id)
+            .one(self.db)
+            .await?
+            .ok_or(DbErr::RecordNotFound("Idea not found".to_string()))?;
+
+        let mut active: idea::ActiveModel = model.into();
+        active.stoke_count = Set(count);
+        active.update(self.db).await?;
+        Ok(())
     }
 }
