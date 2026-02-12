@@ -7,6 +7,7 @@ pub async fn list_ideas(
     category: Option<&str>,
     maturity: Option<&str>,
     sort: Option<&str>,
+    author_id: Option<&str>,
 ) -> Result<IdeaListResponse, client::ApiError> {
     let mut url = format!("/api/v1/ideas?page={page}&per_page={per_page}");
     if let Some(c) = category {
@@ -22,6 +23,11 @@ pub async fn list_ideas(
     if let Some(s) = sort {
         if !s.is_empty() {
             url.push_str(&format!("&sort={s}"));
+        }
+    }
+    if let Some(a) = author_id {
+        if !a.is_empty() {
+            url.push_str(&format!("&author_id={a}"));
         }
     }
     client::get(&url).await

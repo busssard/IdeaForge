@@ -18,12 +18,22 @@ pub fn DashboardPage() -> impl IntoView {
 
 #[component]
 fn DashboardContent() -> impl IntoView {
-    let _auth = expect_context::<AuthState>();
+    let auth = expect_context::<AuthState>();
     let active_tab = RwSignal::new("ideas".to_string());
 
-    // Load my ideas
-    let my_ideas = LocalResource::new(move || async move {
-        api::ideas::list_ideas(1, 20, None, None, None).await
+    // Load my ideas (filtered by current user's author_id)
+    let my_ideas = LocalResource::new(move || {
+        let user_id = auth.user.get().map(|u| u.id).unwrap_or_default();
+        async move {
+            if user_id.is_empty() {
+                return Err(crate::api::client::ApiError {
+                    status: 0,
+                    code: "NO_USER".to_string(),
+                    message: "Loading...".to_string(),
+                });
+            }
+            api::ideas::list_ideas(1, 20, None, None, None, Some(&user_id)).await
+        }
     });
 
     // Load my stoked ideas

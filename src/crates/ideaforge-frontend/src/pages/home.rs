@@ -9,7 +9,7 @@ use crate::components::loading::Loading;
 #[component]
 pub fn HomePage() -> impl IntoView {
     let ideas = LocalResource::new(move || async move {
-        api::ideas::list_ideas(1, 6, None, None, None).await
+        api::ideas::list_ideas(1, 6, None, None, None, None).await
     });
 
     view! {

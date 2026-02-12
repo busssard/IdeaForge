@@ -32,6 +32,7 @@ pub fn BrowsePage() -> impl IntoView {
                 if cat.is_empty() { None } else { Some(cat.as_str()) },
                 if mat.is_empty() { None } else { Some(mat.as_str()) },
                 None,
+                None,
             )
             .await
         }
