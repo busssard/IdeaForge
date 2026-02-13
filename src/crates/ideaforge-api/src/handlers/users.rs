@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::get,
@@ -8,14 +8,26 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::extractors::AuthUser;
+use crate::extractors::{AuthUser, OptionalAuth};
 use crate::state::AppState;
+use ideaforge_db::entities::enums::UserRole;
 use ideaforge_db::repositories::user_repo::UserRepository;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
+        .route("/", get(list_users))
         .route("/me", get(get_me).put(update_me))
         .route("/:id", get(get_user))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListUsersQuery {
+    pub role: Option<String>,
+    pub skills: Option<String>, // comma-separated
+    pub sort: Option<String>,
+    pub include_bots: Option<bool>,
+    pub page: Option<u64>,
+    pub per_page: Option<u64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -26,6 +38,9 @@ pub struct UserResponse {
     pub bio: String,
     pub avatar_url: Option<String>,
     pub role: String,
+    pub skills: serde_json::Value,
+    pub looking_for: Option<String>,
+    pub availability: Option<String>,
     pub created_at: String,
 }
 
@@ -36,7 +51,26 @@ pub struct PublicUserResponse {
     pub bio: String,
     pub avatar_url: Option<String>,
     pub role: String,
+    pub skills: serde_json::Value,
+    pub looking_for: Option<String>,
+    pub availability: Option<String>,
+    pub idea_count: u64,
+    pub stoke_count: u64,
     pub created_at: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UserListResponse {
+    pub data: Vec<PublicUserResponse>,
+    pub meta: PaginationMeta,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PaginationMeta {
+    pub total: u64,
+    pub page: u64,
+    pub per_page: u64,
+    pub total_pages: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -44,6 +78,9 @@ pub struct UpdateMeRequest {
     pub display_name: Option<String>,
     pub bio: Option<String>,
     pub avatar_url: Option<Option<String>>,
+    pub skills: Option<Vec<String>>,
+    pub looking_for: Option<Option<String>>,
+    pub availability: Option<String>,
 }
 
 fn err(status: StatusCode, code: &str, message: &str) -> impl IntoResponse {
@@ -54,6 +91,82 @@ fn err(status: StatusCode, code: &str, message: &str) -> impl IntoResponse {
         })),
     )
         .into_response()
+}
+
+fn parse_user_role(s: &str) -> Option<UserRole> {
+    match s {
+        "entrepreneur" => Some(UserRole::Entrepreneur),
+        "maker" => Some(UserRole::Maker),
+        "curious" => Some(UserRole::Curious),
+        "admin" => Some(UserRole::Admin),
+        _ => None,
+    }
+}
+
+async fn list_users(
+    State(state): State<AppState>,
+    _opt_auth: OptionalAuth,
+    Query(params): Query<ListUsersQuery>,
+) -> impl IntoResponse {
+    let page = params.page.unwrap_or(1).max(1);
+    let per_page = params.per_page.unwrap_or(20).clamp(1, 100);
+    let sort = params.sort.as_deref().unwrap_or("recently_joined");
+    let include_bots = params.include_bots.unwrap_or(false);
+
+    // Parse role filter
+    let role_filter = params.role.as_deref().and_then(parse_user_role);
+
+    // Parse skills filter (comma-separated)
+    let skills_filter = params.skills.as_deref().map(|s| {
+        s.split(',')
+            .map(|skill| skill.trim().to_string())
+            .filter(|skill| !skill.is_empty())
+            .collect::<Vec<_>>()
+    });
+
+    let repo = UserRepository::new(state.db.connection());
+    match repo
+        .list(role_filter, skills_filter, include_bots, sort, page, per_page)
+        .await
+    {
+        Ok((users, total)) => {
+            let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
+            Json(UserListResponse {
+                data: users
+                    .iter()
+                    .map(|u| PublicUserResponse {
+                        id: u.user.id,
+                        display_name: u.user.display_name.clone(),
+                        bio: u.user.bio.clone(),
+                        avatar_url: u.user.avatar_url.clone(),
+                        role: u.user.role.to_string(),
+                        skills: u.user.skills.clone(),
+                        looking_for: u.user.looking_for.clone(),
+                        availability: u.user.availability.clone(),
+                        idea_count: u.idea_count,
+                        stoke_count: u.stoke_count,
+                        created_at: u.user.created_at.to_rfc3339(),
+                    })
+                    .collect(),
+                meta: PaginationMeta {
+                    total,
+                    page,
+                    per_page,
+                    total_pages,
+                },
+            })
+            .into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to list users: {e}");
+            err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response()
+        }
+    }
 }
 
 async fn get_me(
@@ -69,6 +182,9 @@ async fn get_me(
             bio: user.bio,
             avatar_url: user.avatar_url,
             role: user.role.to_string(),
+            skills: user.skills,
+            looking_for: user.looking_for,
+            availability: user.availability,
             created_at: user.created_at.to_rfc3339(),
         })
         .into_response(),
@@ -112,15 +228,55 @@ async fn update_me(
         }
     }
 
+    // Validate skills
+    let skills_json = if let Some(ref skills) = body.skills {
+        if skills.len() > 10 {
+            return err(
+                StatusCode::BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "Maximum 10 skills allowed",
+            )
+            .into_response();
+        }
+        Some(serde_json::json!(skills))
+    } else {
+        None
+    };
+
+    // Validate looking_for
+    if let Some(Some(ref lf)) = body.looking_for {
+        if lf.len() > 500 {
+            return err(
+                StatusCode::BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "Looking for text too long (max 500 chars)",
+            )
+            .into_response();
+        }
+    }
+
+    // Validate availability
+    if let Some(ref av) = body.availability {
+        if av.len() > 100 {
+            return err(
+                StatusCode::BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "Availability text too long (max 100 chars)",
+            )
+            .into_response();
+        }
+    }
+
     let repo = UserRepository::new(state.db.connection());
     match repo
         .update(
             auth.user_id,
             body.display_name.as_deref(),
             body.bio.as_deref(),
-            body.avatar_url
-                .as_ref()
-                .map(|opt| opt.as_deref()),
+            body.avatar_url.as_ref().map(|opt| opt.as_deref()),
+            skills_json.as_ref(),
+            body.looking_for.as_ref().map(|opt| opt.as_deref()),
+            body.availability.as_deref(),
         )
         .await
     {
@@ -131,6 +287,9 @@ async fn update_me(
             bio: user.bio,
             avatar_url: user.avatar_url,
             role: user.role.to_string(),
+            skills: user.skills,
+            looking_for: user.looking_for,
+            availability: user.availability,
             created_at: user.created_at.to_rfc3339(),
         })
         .into_response(),
@@ -150,17 +309,41 @@ async fn get_user(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> impl IntoResponse {
+    use ideaforge_db::entities::{idea, stoke};
+    use sea_orm::*;
+
     let repo = UserRepository::new(state.db.connection());
     match repo.find_by_id(id).await {
-        Ok(Some(user)) => Json(PublicUserResponse {
-            id: user.id,
-            display_name: user.display_name,
-            bio: user.bio,
-            avatar_url: user.avatar_url,
-            role: user.role.to_string(),
-            created_at: user.created_at.to_rfc3339(),
-        })
-        .into_response(),
+        Ok(Some(user)) => {
+            // Fetch stats
+            let idea_count = idea::Entity::find()
+                .filter(idea::Column::AuthorId.eq(id))
+                .filter(idea::Column::ArchivedAt.is_null())
+                .count(state.db.connection())
+                .await
+                .unwrap_or(0);
+
+            let stoke_count = stoke::Entity::find()
+                .filter(stoke::Column::UserId.eq(id))
+                .count(state.db.connection())
+                .await
+                .unwrap_or(0);
+
+            Json(PublicUserResponse {
+                id: user.id,
+                display_name: user.display_name,
+                bio: user.bio,
+                avatar_url: user.avatar_url,
+                role: user.role.to_string(),
+                skills: user.skills,
+                looking_for: user.looking_for,
+                availability: user.availability,
+                idea_count,
+                stoke_count,
+                created_at: user.created_at.to_rfc3339(),
+            })
+            .into_response()
+        }
         Ok(None) => err(StatusCode::NOT_FOUND, "NOT_FOUND", "User not found").into_response(),
         Err(e) => {
             tracing::error!("Failed to get user: {e}");
