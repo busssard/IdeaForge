@@ -24,6 +24,7 @@ pub fn Navbar() -> impl IntoView {
 
                 <div class="navbar-links">
                     <A href="/browse">"Forge Floor"</A>
+                    <A href="/people">"People"</A>
                     <A href="/dashboard">"Dashboard"</A>
                 </div>
 

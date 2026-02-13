@@ -114,6 +114,10 @@ pub struct UserResponse {
     pub bio: String,
     pub avatar_url: Option<String>,
     pub role: String,
+    #[serde(default)]
+    pub skills: serde_json::Value,
+    pub looking_for: Option<String>,
+    pub availability: Option<String>,
     pub created_at: String,
 }
 
@@ -124,7 +128,21 @@ pub struct PublicUserResponse {
     pub bio: String,
     pub avatar_url: Option<String>,
     pub role: String,
+    #[serde(default)]
+    pub skills: serde_json::Value,
+    pub looking_for: Option<String>,
+    pub availability: Option<String>,
+    #[serde(default)]
+    pub idea_count: u64,
+    #[serde(default)]
+    pub stoke_count: u64,
     pub created_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UserListResponse {
+    pub data: Vec<PublicUserResponse>,
+    pub meta: PaginationMeta,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -133,6 +151,37 @@ pub struct UpdateMeRequest {
     pub display_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bio: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skills: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub looking_for: Option<Option<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub availability: Option<String>,
+}
+
+// --- Skills ---
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SkillCategory {
+    pub category: String,
+    pub skills: Vec<String>,
+}
+
+// --- Invite Links ---
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct InviteLinkResponse {
+    pub token: String,
+    pub idea_id: String,
+    pub permission: String,
+    pub access_count: i32,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CreateInviteLinkRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permission: Option<String>,
 }
 
 // --- Categories ---

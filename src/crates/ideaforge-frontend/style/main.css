@@ -1310,3 +1310,302 @@ h4 { font-size: 1.25rem; }
     color: var(--spark-gold);
     border: 1px solid rgba(241, 196, 15, 0.25);
 }
+
+/* --- People Discovery --- */
+
+.people-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+}
+
+.user-card {
+    padding: var(--space-md);
+    border-radius: var(--radius-lg);
+    background: var(--charcoal);
+    border: 1px solid var(--border-subtle);
+    transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.user-card:hover {
+    border-color: var(--forge-orange);
+    transform: translateY(-2px);
+}
+
+.user-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.user-card-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--forge-orange-light);
+    color: var(--forge-orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.user-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-card-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--parchment-white);
+}
+
+.user-card-role {
+    font-size: 0.8rem;
+    padding: 2px 10px;
+    border-radius: 12px;
+    display: inline-block;
+    margin-top: 4px;
+}
+
+.role-entrepreneur {
+    background: rgba(232, 96, 10, 0.15);
+    color: var(--forge-orange);
+}
+
+.role-maker {
+    background: rgba(59, 110, 143, 0.15);
+    color: var(--steel-blue);
+}
+
+.role-curious {
+    background: rgba(241, 196, 15, 0.12);
+    color: var(--spark-gold);
+}
+
+.role-admin {
+    background: rgba(192, 57, 43, 0.15);
+    color: var(--ember-red);
+}
+
+.user-card-bio {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: var(--space-xs) 0;
+    line-height: 1.5;
+}
+
+.user-card-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: var(--space-xs) 0;
+}
+
+.user-card-looking-for {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: var(--space-xs) 0 0;
+}
+
+.looking-for-label {
+    color: var(--spark-gold);
+    font-weight: 500;
+}
+
+.user-card-stats {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-sm);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--border-subtle);
+}
+
+.user-stat {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* --- Page Headers --- */
+
+.page-header {
+    margin-bottom: var(--space-lg);
+}
+
+.page-subtitle {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-top: var(--space-xs);
+}
+
+/* --- Onboarding Checklist --- */
+
+.onboarding-banner {
+    max-width: 800px;
+    margin: var(--space-md) auto;
+    padding: var(--space-md) var(--space-lg);
+    background: linear-gradient(135deg, rgba(232, 96, 10, 0.08), rgba(241, 196, 15, 0.05));
+    border: 1px solid var(--forge-orange);
+    border-radius: var(--radius-lg);
+}
+
+.onboarding-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+}
+
+.onboarding-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--forge-orange);
+    margin: 0;
+}
+
+.onboarding-dismiss {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.onboarding-dismiss:hover {
+    background: var(--forge-orange-light);
+    color: var(--forge-orange);
+}
+
+.onboarding-progress {
+    height: 6px;
+    background: var(--border-subtle);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.onboarding-progress-bar {
+    height: 100%;
+    background: var(--forge-orange);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.onboarding-progress-text {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.onboarding-steps {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-sm) 0 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xs);
+}
+
+.onboarding-steps li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.onboarding-steps li.step-done {
+    color: var(--text-muted);
+    text-decoration: line-through;
+}
+
+.step-check {
+    font-size: 1rem;
+}
+
+.step-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.step-link:hover {
+    color: var(--forge-orange);
+}
+
+/* --- Filter groups --- */
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.browse-filters {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-md);
+}
+
+/* --- Profile Enhancements --- */
+
+.profile-stats {
+    display: flex;
+    gap: var(--space-lg);
+    padding: var(--space-md) 0;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    margin: var(--space-md) 0;
+}
+
+.profile-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.profile-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--forge-orange);
+}
+
+.profile-stat-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.profile-section {
+    margin: var(--space-md) 0;
+}
+
+.profile-section h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-xs);
+}
+
+.profile-actions {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+@media (max-width: 600px) {
+    .people-grid {
+        grid-template-columns: 1fr;
+    }
+    .onboarding-steps {
+        grid-template-columns: 1fr;
+    }
+}

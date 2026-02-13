@@ -13,3 +13,4 @@ pub mod team_panel;
 pub mod subscribe_button;
 pub mod share_buttons;
 pub mod visibility_badge;
+pub mod onboarding_checklist;

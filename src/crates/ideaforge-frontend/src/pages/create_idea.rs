@@ -144,10 +144,12 @@ fn CreateIdeaForm() -> impl IntoView {
                 <div class="form-group">
                     <label class="form-label" for="openness">"Openness"</label>
                     <select node_ref=openness_ref class="form-select" id="openness">
-                        <option value="open">"Open — anyone can contribute"</option>
+                        <option value="open">"Open Source — anyone can contribute"</option>
                         <option value="collaborative">"Collaborative — team-based"</option>
                         <option value="commercial">"Commercial — IP protected"</option>
+                        <option value="private">"Private — invite only"</option>
                     </select>
+                    <span class="form-help">"Private ideas are only visible to people you invite."</span>
                 </div>
 
                 <div class="form-group">

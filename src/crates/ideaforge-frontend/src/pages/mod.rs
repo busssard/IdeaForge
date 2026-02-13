@@ -7,3 +7,4 @@ pub mod dashboard;
 pub mod profile;
 pub mod settings;
 pub mod not_found;
+pub mod people;
