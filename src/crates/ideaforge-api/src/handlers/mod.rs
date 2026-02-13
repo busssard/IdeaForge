@@ -7,3 +7,5 @@ pub mod notifications;
 pub mod search;
 pub mod health;
 pub mod subscriptions;
+pub mod invites;
+pub mod skills;

@@ -56,6 +56,7 @@ impl<'a> IdeaRepository<'a> {
         openness: Option<IdeaOpenness>,
         category_id: Option<Uuid>,
         author_id: Option<Uuid>,
+        exclude_private: bool,
         page: u64,
         per_page: u64,
     ) -> Result<(Vec<idea::Model>, u64), DbErr> {
@@ -72,6 +73,9 @@ impl<'a> IdeaRepository<'a> {
         }
         if let Some(aid) = author_id {
             query = query.filter(idea::Column::AuthorId.eq(aid));
+        }
+        if exclude_private {
+            query = query.filter(idea::Column::Openness.ne(IdeaOpenness::Private));
         }
 
         query = query.order_by_desc(idea::Column::CreatedAt);

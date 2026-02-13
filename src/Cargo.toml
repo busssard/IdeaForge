@@ -64,6 +64,8 @@ async-trait = "0.1"
 config = "0.14"
 dotenvy = "0.15"
 validator = { version = "0.19", features = ["derive"] }
+rand = "0.8"
+hex = "0.4"
 
 # Internal crates
 ideaforge-core = { path = "crates/ideaforge-core" }

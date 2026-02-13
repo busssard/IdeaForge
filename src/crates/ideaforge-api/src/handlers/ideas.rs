@@ -14,7 +14,9 @@ use ideaforge_db::entities::enums::{ContributionKind, IdeaMaturity, IdeaOpenness
 use ideaforge_db::entities::stoke;
 use ideaforge_db::repositories::contribution_repo::ContributionRepository;
 use ideaforge_db::repositories::idea_repo::IdeaRepository;
+use ideaforge_db::repositories::invite_link_repo::InviteLinkRepository;
 use ideaforge_db::repositories::stoke_repo::StokeRepository;
+use ideaforge_db::repositories::team_repo::TeamMemberRepository;
 use sea_orm::*;
 
 pub fn routes() -> Router<AppState> {
@@ -37,6 +39,11 @@ pub struct ListIdeasQuery {
     pub author_id: Option<Uuid>,
     pub page: Option<u64>,
     pub per_page: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GetIdeaQuery {
+    pub token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -186,6 +193,10 @@ async fn list_ideas(
     let maturity_filter = params.maturity.as_deref().and_then(IdeaMaturity::from_str_opt);
     let openness_filter = params.openness.as_deref().and_then(IdeaOpenness::from_str_opt);
 
+    // Exclude private ideas from public listing unless viewing own ideas
+    let exclude_private = params.author_id.is_none() ||
+        opt_auth.0.as_ref().map_or(true, |auth| Some(auth.user_id) != params.author_id);
+
     let repo = IdeaRepository::new(state.db.connection());
     match repo
         .list(
@@ -193,6 +204,7 @@ async fn list_ideas(
             openness_filter,
             params.category_id,
             params.author_id,
+            exclude_private,
             page,
             per_page,
         )
@@ -283,11 +295,12 @@ async fn create_idea(
         None | Some("open") => IdeaOpenness::Open,
         Some("collaborative") => IdeaOpenness::Collaborative,
         Some("commercial") => IdeaOpenness::Commercial,
+        Some("private") => IdeaOpenness::Private,
         Some(_) => {
             return err(
                 StatusCode::BAD_REQUEST,
                 "VALIDATION_ERROR",
-                "Invalid openness. Must be: open, collaborative, or commercial",
+                "Invalid openness. Must be: open, collaborative, commercial, or private",
             )
             .into_response();
         }
@@ -324,10 +337,55 @@ async fn get_idea(
     State(state): State<AppState>,
     opt_auth: OptionalAuth,
     Path(id): Path<Uuid>,
+    Query(params): Query<GetIdeaQuery>,
 ) -> impl IntoResponse {
     let repo = IdeaRepository::new(state.db.connection());
     match repo.find_by_id(id).await {
         Ok(Some(idea)) => {
+            // If the idea is private, check access permissions
+            if idea.openness == IdeaOpenness::Private {
+                let has_access = if let OptionalAuth(Some(ref auth)) = opt_auth {
+                    // Author always has access
+                    if idea.author_id == auth.user_id {
+                        true
+                    } else {
+                        // Check if user is a team member
+                        let team_repo = TeamMemberRepository::new(state.db.connection());
+                        team_repo.exists(auth.user_id, id).await.unwrap_or(false)
+                    }
+                } else {
+                    false
+                };
+
+                // If not authenticated or not a team member, check for invite token
+                if !has_access {
+                    if let Some(token) = params.token {
+                        let invite_repo = InviteLinkRepository::new(state.db.connection());
+                        match invite_repo.find_by_token(&token).await {
+                            Ok(Some(invite)) if invite.idea_id == id => {
+                                // Valid invite token - increment access count
+                                let _ = invite_repo.increment_access_count(&token).await;
+                            }
+                            _ => {
+                                return err(
+                                    StatusCode::FORBIDDEN,
+                                    "FORBIDDEN",
+                                    "This idea is private",
+                                )
+                                .into_response();
+                            }
+                        }
+                    } else {
+                        return err(
+                            StatusCode::FORBIDDEN,
+                            "FORBIDDEN",
+                            "This idea is private",
+                        )
+                        .into_response();
+                    }
+                }
+            }
+
             let has_stoked = if let OptionalAuth(Some(ref auth)) = opt_auth {
                 let stoke_repo = StokeRepository::new(state.db.connection());
                 stoke_repo.exists(auth.user_id, id).await.unwrap_or(false)
@@ -405,7 +463,7 @@ async fn update_idea(
                 return err(
                     StatusCode::BAD_REQUEST,
                     "VALIDATION_ERROR",
-                    "Invalid openness. Must be: open, collaborative, or commercial",
+                    "Invalid openness. Must be: open, collaborative, commercial, or private",
                 )
                 .into_response();
             }
