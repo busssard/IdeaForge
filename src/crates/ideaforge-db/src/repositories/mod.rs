@@ -6,3 +6,6 @@ pub mod contribution_repo;
 pub mod team_repo;
 pub mod subscription_repo;
 pub mod invite_link_repo;
+pub mod bot_endorsement_repo;
+pub mod flag_repo;
+pub mod notification_repo;

@@ -33,7 +33,10 @@ fn api_routes() -> Router<AppState> {
         .nest("/categories", handlers::categories::routes())
         .nest("/users", handlers::users::routes())
         .nest("/skills", handlers::skills::routes())
+        .nest("/bots", handlers::bots::routes())
+        .nest("/flags", handlers::flags::routes())
+        .nest("/notifications", handlers::notifications::routes())
+        .nest("/admin", handlers::flags::admin_routes())
     // Deferred to next iteration:
-    // .nest("/notifications", handlers::notifications::routes())
     // .nest("/search", handlers::search::routes())
 }

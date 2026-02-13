@@ -46,3 +46,4 @@ argon2 = { workspace = true }
 async-trait = { workspace = true }
 rand = { workspace = true }
 hex = { workspace = true }
+sha2 = { workspace = true }

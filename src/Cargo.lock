@@ -1583,6 +1583,7 @@ dependencies = [
  "sea-orm",
  "serde",
  "serde_json",
+ "sha2",
  "tokio",
  "tower 0.4.13",
  "tower-http",

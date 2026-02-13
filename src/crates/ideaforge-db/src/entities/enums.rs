@@ -293,6 +293,27 @@ pub enum FlagTargetType {
     User,
 }
 
+impl std::fmt::Display for FlagTargetType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Idea => write!(f, "idea"),
+            Self::Comment => write!(f, "comment"),
+            Self::User => write!(f, "user"),
+        }
+    }
+}
+
+impl FlagTargetType {
+    pub fn from_str_opt(s: &str) -> Option<Self> {
+        match s {
+            "idea" => Some(Self::Idea),
+            "comment" => Some(Self::Comment),
+            "user" => Some(Self::User),
+            _ => None,
+        }
+    }
+}
+
 /// PostgreSQL enum: flag_status
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "flag_status")]
@@ -308,6 +329,27 @@ pub enum FlagStatus {
 impl Default for FlagStatus {
     fn default() -> Self {
         Self::Pending
+    }
+}
+
+impl std::fmt::Display for FlagStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Pending => write!(f, "pending"),
+            Self::Reviewed => write!(f, "reviewed"),
+            Self::Dismissed => write!(f, "dismissed"),
+        }
+    }
+}
+
+impl FlagStatus {
+    pub fn from_str_opt(s: &str) -> Option<Self> {
+        match s {
+            "pending" => Some(Self::Pending),
+            "reviewed" => Some(Self::Reviewed),
+            "dismissed" => Some(Self::Dismissed),
+            _ => None,
+        }
     }
 }
 
@@ -333,4 +375,37 @@ pub enum NotificationKind {
     BotAnalysis,
     #[sea_orm(string_value = "mention")]
     Mention,
+}
+
+impl std::fmt::Display for NotificationKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Stoke => write!(f, "stoke"),
+            Self::Comment => write!(f, "comment"),
+            Self::Suggestion => write!(f, "suggestion"),
+            Self::TeamApplication => write!(f, "team_application"),
+            Self::TeamAccepted => write!(f, "team_accepted"),
+            Self::TeamRejected => write!(f, "team_rejected"),
+            Self::Milestone => write!(f, "milestone"),
+            Self::BotAnalysis => write!(f, "bot_analysis"),
+            Self::Mention => write!(f, "mention"),
+        }
+    }
+}
+
+impl NotificationKind {
+    pub fn from_str_opt(s: &str) -> Option<Self> {
+        match s {
+            "stoke" => Some(Self::Stoke),
+            "comment" => Some(Self::Comment),
+            "suggestion" => Some(Self::Suggestion),
+            "team_application" => Some(Self::TeamApplication),
+            "team_accepted" => Some(Self::TeamAccepted),
+            "team_rejected" => Some(Self::TeamRejected),
+            "milestone" => Some(Self::Milestone),
+            "bot_analysis" => Some(Self::BotAnalysis),
+            "mention" => Some(Self::Mention),
+            _ => None,
+        }
+    }
 }

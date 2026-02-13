@@ -45,6 +45,60 @@ impl<'a> UserRepository<'a> {
         model.insert(self.db).await
     }
 
+    /// Create a bot account with bot-specific fields.
+    pub async fn create_bot(
+        &self,
+        id: Uuid,
+        email: &str,
+        display_name: &str,
+        bot_operator: &str,
+        bot_description: &str,
+        bot_api_key_hash: &str,
+    ) -> Result<user::Model, DbErr> {
+        let now = chrono::Utc::now().fixed_offset();
+        let model = user::ActiveModel {
+            id: Set(id),
+            email: Set(email.to_string()),
+            password_hash: Set(String::new()), // Bots don't use passwords
+            display_name: Set(display_name.to_string()),
+            bio: Set(bot_description.to_string()),
+            avatar_url: Set(None),
+            role: Set(UserRole::Curious), // Bots use the "curious" role
+            email_verified: Set(true),    // Bots are pre-verified
+            is_bot: Set(true),
+            bot_operator: Set(Some(bot_operator.to_string())),
+            bot_description: Set(Some(bot_description.to_string())),
+            bot_api_key_hash: Set(Some(bot_api_key_hash.to_string())),
+            skills: Set(serde_json::json!([])),
+            looking_for: Set(None),
+            availability: Set(None),
+            created_at: Set(now),
+            updated_at: Set(now),
+        };
+        model.insert(self.db).await
+    }
+
+    /// Find a bot user by the SHA-256 hash of its API key.
+    pub async fn find_bot_by_api_key_hash(
+        &self,
+        api_key_hash: &str,
+    ) -> Result<Option<user::Model>, DbErr> {
+        user::Entity::find()
+            .filter(user::Column::IsBot.eq(true))
+            .filter(user::Column::BotApiKeyHash.eq(api_key_hash))
+            .one(self.db)
+            .await
+    }
+
+    /// List all bot users.
+    pub async fn list_bots(&self) -> Result<Vec<user::Model>, DbErr> {
+        user::Entity::find()
+            .filter(user::Column::IsBot.eq(true))
+            .order_by_desc(user::Column::CreatedAt)
+            .all(self.db)
+            .await
+    }
+
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<user::Model>, DbErr> {
         user::Entity::find_by_id(id).one(self.db).await
     }

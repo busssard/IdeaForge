@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod bots;
 pub mod ideas;
 pub mod team;
 pub mod categories;
@@ -9,3 +10,4 @@ pub mod health;
 pub mod subscriptions;
 pub mod invites;
 pub mod skills;
+pub mod flags;
