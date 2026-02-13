@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::extractors::{AuthUser, OptionalAuth};
 use crate::state::AppState;
-use ideaforge_db::entities::enums::{ContributionKind, IdeaMaturity, IdeaOpenness};
+use ideaforge_db::entities::enums::{ContributionKind, IdeaMaturity, IdeaOpenness, UserRole};
 use ideaforge_db::entities::stoke;
 use ideaforge_db::repositories::contribution_repo::ContributionRepository;
 use ideaforge_db::repositories::idea_repo::IdeaRepository;
@@ -263,6 +263,17 @@ async fn create_idea(
     auth: AuthUser,
     Json(body): Json<CreateIdeaRequest>,
 ) -> impl IntoResponse {
+    // Permission check: only entrepreneurs, makers, and admins can create ideas
+    let role = UserRole::from_str_opt(&auth.role);
+    if !role.map_or(false, |r| r.can_create_ideas()) {
+        return err(
+            StatusCode::FORBIDDEN,
+            "FORBIDDEN",
+            "Your role does not have permission to create ideas",
+        )
+        .into_response();
+    }
+
     // Validate
     let title = body.title.trim();
     if title.is_empty() || title.len() > 200 {
@@ -724,6 +735,19 @@ async fn create_contribution(
             .into_response();
         }
     };
+
+    // Permission check: only entrepreneurs, makers, and admins can submit suggestions
+    if contribution_type == ContributionKind::Suggestion {
+        let role = UserRole::from_str_opt(&auth.role);
+        if !role.map_or(false, |r| r.can_suggest()) {
+            return err(
+                StatusCode::FORBIDDEN,
+                "FORBIDDEN",
+                "Your role does not have permission to submit suggestions",
+            )
+            .into_response();
+        }
+    }
 
     // Verify idea exists
     let idea_repo = IdeaRepository::new(state.db.connection());
