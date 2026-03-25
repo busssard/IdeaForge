@@ -1,0 +1,11 @@
+name = "ideaforge/pledge_escrow"
+version = "0.1.0"
+license = "Apache-2.0"
+description = "IdeaForge pledge escrow smart contract for Cardano"
+
+[repository]
+user = "ideaforge"
+project = "pledge_escrow"
+platform = "github"
+
+dependencies = []
