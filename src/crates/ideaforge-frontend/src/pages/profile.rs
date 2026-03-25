@@ -30,6 +30,13 @@ pub fn ProfilePage() -> impl IntoView {
                                 let bio = u.bio.clone();
                                 let avatar_url = u.avatar_url.clone();
                                 let member_since = u.created_at.split('T').next().unwrap_or("").to_string();
+                                let skills: Vec<String> = u.skills.as_array()
+                                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                                    .unwrap_or_default();
+                                let looking_for = u.looking_for.clone();
+                                let availability = u.availability.clone();
+                                let idea_count = u.idea_count;
+                                let stoke_count = u.stoke_count;
 
                                 let role_badge_class = format!("badge badge-{}", role.to_lowercase());
 
@@ -69,6 +76,17 @@ pub fn ProfilePage() -> impl IntoView {
                                             </div>
                                         </div>
 
+                                        <div class="profile-stats">
+                                            <div class="profile-stat">
+                                                <span class="profile-stat-value">{idea_count}</span>
+                                                <span class="profile-stat-label">"Ideas"</span>
+                                            </div>
+                                            <div class="profile-stat">
+                                                <span class="profile-stat-value">{stoke_count}</span>
+                                                <span class="profile-stat-label">"Stokes"</span>
+                                            </div>
+                                        </div>
+
                                         {if !bio.is_empty() {
                                             view! {
                                                 <div class="profile-bio">
@@ -84,8 +102,37 @@ pub fn ProfilePage() -> impl IntoView {
                                             }.into_any()
                                         }}
 
+                                        {(!skills.is_empty()).then(|| {
+                                            let skill_tags = skills.clone();
+                                            view! {
+                                                <div class="profile-section">
+                                                    <h3>"Skills"</h3>
+                                                    <div class="user-card-skills">
+                                                        {skill_tags.into_iter().map(|skill| {
+                                                            view! { <span class="skill-tag">{skill}</span> }
+                                                        }).collect::<Vec<_>>()}
+                                                    </div>
+                                                </div>
+                                            }
+                                        })}
+
+                                        {looking_for.map(|lf| view! {
+                                            <div class="profile-section">
+                                                <h3>"Looking for"</h3>
+                                                <p>{lf}</p>
+                                            </div>
+                                        })}
+
+                                        {availability.map(|av| view! {
+                                            <div class="profile-section">
+                                                <h3>"Availability"</h3>
+                                                <p>{av}</p>
+                                            </div>
+                                        })}
+
                                         <div class="profile-actions mt-md">
-                                            <A href="/browse" attr:class="btn btn-secondary">"Back to Forge Floor"</A>
+                                            <A href="/people" attr:class="btn btn-secondary">"Discover People"</A>
+                                            <A href="/browse" attr:class="btn btn-secondary">"Forge Floor"</A>
                                         </div>
                                     </div>
                                 }.into_any()

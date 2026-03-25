@@ -1,0 +1,42 @@
+use leptos::prelude::*;
+use leptos_router::components::A;
+
+use crate::api;
+use crate::state::auth::AuthState;
+
+/// Notification bell icon in the navbar showing unread count.
+#[component]
+pub fn NotificationBell() -> impl IntoView {
+    let auth = expect_context::<AuthState>();
+
+    let unread = LocalResource::new(move || async move {
+        if auth.user.get_untracked().is_some() {
+            api::notifications::unread_count().await.ok().map(|r| r.unread_count)
+        } else {
+            None
+        }
+    });
+
+    view! {
+        {move || {
+            if auth.user.get().is_none() {
+                return view! { <span></span> }.into_any();
+            }
+
+            let count = unread.get()
+                .and_then(|r| (*r).clone())
+                .unwrap_or(0);
+
+            view! {
+                <A href="/notifications" attr:class="notification-bell" attr:title="Notifications">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                    </svg>
+                    {(count > 0).then(|| view! {
+                        <span class="notification-badge">{count}</span>
+                    })}
+                </A>
+            }.into_any()
+        }}
+    }
+}

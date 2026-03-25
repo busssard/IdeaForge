@@ -30,6 +30,9 @@ fn SettingsContent() -> impl IntoView {
     // NodeRefs for form inputs
     let name_ref = NodeRef::<leptos::html::Input>::new();
     let bio_ref = NodeRef::<leptos::html::Textarea>::new();
+    let skills_ref = NodeRef::<leptos::html::Input>::new();
+    let looking_for_ref = NodeRef::<leptos::html::Input>::new();
+    let availability_ref = NodeRef::<leptos::html::Select>::new();
 
     let on_submit = move |ev: web_sys::SubmitEvent| {
         ev.prevent_default();
@@ -38,6 +41,12 @@ fn SettingsContent() -> impl IntoView {
 
         let display_name = name_ref.get().map(|el| el.value()).unwrap_or_default();
         let bio = bio_ref.get().map(|el| el.value()).unwrap_or_default();
+        let skills_str = skills_ref.get().map(|el| el.value()).unwrap_or_default();
+        let looking_for = looking_for_ref.get().map(|el| el.value()).unwrap_or_default();
+        let availability = availability_ref.get().map(|el| {
+            let el: &web_sys::HtmlSelectElement = &el;
+            el.value()
+        }).unwrap_or_default();
 
         if display_name.trim().is_empty() {
             error.set("Display name cannot be empty.".to_string());
@@ -49,12 +58,27 @@ fn SettingsContent() -> impl IntoView {
             return;
         }
 
+        // Parse skills from comma-separated string
+        let skills: Vec<String> = skills_str
+            .split(',')
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        if skills.len() > 10 {
+            error.set("Maximum 10 skills allowed.".to_string());
+            return;
+        }
+
         loading.set(true);
 
         wasm_bindgen_futures::spawn_local(async move {
             let req = UpdateMeRequest {
                 display_name: Some(display_name),
                 bio: Some(bio),
+                skills: Some(skills),
+                looking_for: if looking_for.is_empty() { Some(None) } else { Some(Some(looking_for)) },
+                availability: if availability.is_empty() { None } else { Some(availability) },
             };
 
             match api::users::update_me(req).await {
@@ -85,6 +109,11 @@ fn SettingsContent() -> impl IntoView {
                                     let bio = user.bio.clone();
                                     let email = user.email.clone();
                                     let role = user.role.clone();
+                                    let skills_str = user.skills.as_array()
+                                        .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>().join(", "))
+                                        .unwrap_or_default();
+                                    let looking_for = user.looking_for.clone().unwrap_or_default();
+                                    let availability = user.availability.clone().unwrap_or_default();
 
                                     view! {
                                         <div class="card">
@@ -164,6 +193,49 @@ fn SettingsContent() -> impl IntoView {
                                                         placeholder="Tell others about yourself..."
                                                     >{bio}</textarea>
                                                     <span class="form-hint">"Maximum 2000 characters."</span>
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label class="form-label" for="skills">"Skills"</label>
+                                                    <input
+                                                        type="text"
+                                                        id="skills"
+                                                        class="form-input"
+                                                        node_ref=skills_ref
+                                                        value=skills_str
+                                                        placeholder="rust, frontend, marketing, 3d-printing..."
+                                                    />
+                                                    <span class="form-hint">"Comma-separated, max 10 skills. Helps others discover you."</span>
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label class="form-label" for="looking_for">"Looking for"</label>
+                                                    <input
+                                                        type="text"
+                                                        id="looking_for"
+                                                        class="form-input"
+                                                        node_ref=looking_for_ref
+                                                        value=looking_for
+                                                        placeholder="Co-founder, designer, marketing help..."
+                                                        maxlength="500"
+                                                    />
+                                                    <span class="form-hint">"What kind of collaboration are you seeking?"</span>
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label class="form-label" for="availability">"Availability"</label>
+                                                    <select
+                                                        id="availability"
+                                                        class="form-select"
+                                                        node_ref=availability_ref
+                                                    >
+                                                        <option value="" selected=availability.is_empty()>"Not specified"</option>
+                                                        <option value="full-time" selected={availability == "full-time"}>"Full-time"</option>
+                                                        <option value="part-time" selected={availability == "part-time"}>"Part-time"</option>
+                                                        <option value="weekends" selected={availability == "weekends"}>"Weekends only"</option>
+                                                        <option value="few-hours" selected={availability == "few-hours"}>"A few hours/week"</option>
+                                                        <option value="open-to-chat" selected={availability == "open-to-chat"}>"Open to chat"</option>
+                                                    </select>
                                                 </div>
 
                                                 <button

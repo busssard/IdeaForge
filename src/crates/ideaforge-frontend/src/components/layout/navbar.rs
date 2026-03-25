@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use leptos_router::components::A;
 use leptos_router::hooks::use_navigate;
 
+use crate::components::notification_bell::NotificationBell;
 use crate::state::auth::AuthState;
 
 #[component]
@@ -35,6 +36,7 @@ pub fn Navbar() -> impl IntoView {
                                 <A href="/ideas/new" attr:class="btn btn-primary btn-sm">
                                     "Bring to the Forge"
                                 </A>
+                                <NotificationBell />
                                 <A href="/settings" attr:class="btn btn-ghost btn-sm">
                                     "Settings"
                                 </A>

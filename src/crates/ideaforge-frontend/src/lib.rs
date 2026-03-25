@@ -18,6 +18,7 @@ use pages::create_idea::CreateIdeaPage;
 use pages::dashboard::DashboardPage;
 use pages::home::HomePage;
 use pages::idea_detail::IdeaDetailPage;
+use pages::notifications::NotificationsPage;
 use pages::people::PeoplePage;
 use pages::profile::ProfilePage;
 use pages::settings::SettingsPage;
@@ -51,6 +52,7 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("/dashboard") view=DashboardPage />
                     <Route path=path!("/profile/:id") view=ProfilePage />
                     <Route path=path!("/settings") view=SettingsPage />
+                    <Route path=path!("/notifications") view=NotificationsPage />
                 </Routes>
             </main>
             <Footer />
