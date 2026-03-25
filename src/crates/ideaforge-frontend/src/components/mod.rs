@@ -18,3 +18,4 @@ pub mod nda_wall;
 pub mod notification_bell;
 pub mod bot_section;
 pub mod task_board;
+pub mod bug_report;

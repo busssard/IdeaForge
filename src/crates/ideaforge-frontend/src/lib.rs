@@ -8,6 +8,7 @@ use leptos_router::components::*;
 use leptos_router::path;
 use wasm_bindgen::prelude::wasm_bindgen;
 
+use components::bug_report::BugReportButton;
 use components::layout::navbar::Navbar;
 use components::layout::footer::Footer;
 use components::onboarding_checklist::OnboardingChecklist;
@@ -56,6 +57,7 @@ pub fn App() -> impl IntoView {
                 </Routes>
             </main>
             <Footer />
+            <BugReportButton />
         </Router>
     }
 }

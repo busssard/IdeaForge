@@ -39,6 +39,7 @@ fn api_routes() -> Router<AppState> {
         .nest("/flags", handlers::flags::routes())
         .nest("/notifications", handlers::notifications::routes())
         .nest("/admin", handlers::flags::admin_routes())
+        .nest("/bugs", handlers::bugs::routes())
     // Deferred to next iteration:
     // .nest("/search", handlers::search::routes())
 }

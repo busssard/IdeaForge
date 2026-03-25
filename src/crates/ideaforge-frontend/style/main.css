@@ -2245,3 +2245,82 @@ h4 { font-size: 1.25rem; }
     display: flex;
     gap: var(--space-sm);
 }
+
+/* --- Bug Report FAB --- */
+.bug-report-fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--bg-card, #1e1e2e);
+    border: 2px solid var(--border-default, #333);
+    color: var(--text-primary, #fff);
+    font-size: 1.4rem;
+    cursor: pointer;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.bug-report-fab:hover {
+    border-color: var(--forge-orange, #e67e22);
+    transform: scale(1.1);
+}
+
+.bug-report-panel {
+    position: fixed;
+    bottom: 84px;
+    right: 24px;
+    width: 320px;
+    background: var(--bg-card, #1e1e2e);
+    border: 1px solid var(--border-default, #333);
+    border-radius: var(--radius-lg, 12px);
+    padding: var(--space-md, 16px);
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+
+.bug-report-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm, 8px);
+}
+
+.bug-report-form h4 {
+    margin: 0 0 4px 0;
+}
+
+.bug-report-form textarea {
+    padding: var(--space-sm, 8px);
+    border: 1px solid var(--border-default, #333);
+    border-radius: var(--radius-md, 8px);
+    background: var(--bg-primary, #111);
+    color: var(--text-primary, #fff);
+    font-size: 0.9rem;
+    resize: vertical;
+}
+
+.bug-report-form select {
+    padding: var(--space-sm, 8px);
+    border: 1px solid var(--border-default, #333);
+    border-radius: var(--radius-md, 8px);
+    background: var(--bg-primary, #111);
+    color: var(--text-primary, #fff);
+    font-size: 0.85rem;
+}
+
+.bug-report-success {
+    text-align: center;
+    padding: var(--space-md, 16px) 0;
+}
+
+.bug-report-success p {
+    color: #4ade80;
+    font-weight: 600;
+    margin-bottom: var(--space-sm, 8px);
+}

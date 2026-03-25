@@ -13,3 +13,4 @@ pub mod subscriptions;
 pub mod invites;
 pub mod skills;
 pub mod flags;
+pub mod bugs;
