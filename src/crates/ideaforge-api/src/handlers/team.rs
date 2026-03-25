@@ -26,6 +26,7 @@ pub fn routes() -> Router<AppState> {
         .route("/:id/team/applications/:aid", put(review_application))
         .route("/:id/team", get(list_team_members))
         .route("/:id/team/:uid", delete(remove_team_member))
+        .route("/:id/team/:uid/role", put(update_team_role))
 }
 
 // --- DTOs ---
@@ -71,12 +72,19 @@ pub struct TeamMemberResponse {
     pub idea_id: Uuid,
     pub user_id: Uuid,
     pub role: String,
+    pub role_label: Option<String>,
     pub joined_at: String,
 }
 
 #[derive(Debug, Serialize)]
 pub struct TeamListResponse {
     pub data: Vec<TeamMemberResponse>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateRoleRequest {
+    pub role: Option<String>,
+    pub role_label: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -456,6 +464,7 @@ async fn list_team_members(
                     idea_id: m.idea_id,
                     user_id: m.user_id,
                     role: m.role.to_string(),
+                    role_label: m.role_label.clone(),
                     joined_at: m.joined_at.to_rfc3339(),
                 })
                 .collect(),
@@ -517,6 +526,113 @@ async fn remove_team_member(
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => {
             tracing::error!("Failed to remove team member: {e}");
+            err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response()
+        }
+    }
+}
+
+async fn update_team_role(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path((id, uid)): Path<(Uuid, Uuid)>,
+    Json(body): Json<UpdateRoleRequest>,
+) -> impl IntoResponse {
+    // Only idea author can change team roles
+    let idea_repo = IdeaRepository::new(state.db.connection());
+    match idea_repo.find_by_id(id).await {
+        Ok(Some(idea)) if idea.author_id == auth.user_id => {}
+        Ok(Some(_)) => {
+            return err(
+                StatusCode::FORBIDDEN,
+                "FORBIDDEN",
+                "Only the idea author can change team roles",
+            )
+            .into_response()
+        }
+        Ok(None) => {
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to find idea: {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response();
+        }
+    }
+
+    // Validate role_label length if provided
+    if let Some(ref label) = body.role_label {
+        if label.trim().is_empty() || label.len() > 100 {
+            return err(
+                StatusCode::BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "Role label must be 1-100 chars",
+            )
+            .into_response();
+        }
+    }
+
+    // If both role and role_label are provided, use update_role
+    // If only role_label, use update_role_label
+    // If only role, use update_role with existing label (or None)
+    let member_repo = TeamMemberRepository::new(state.db.connection());
+
+    let result = if let Some(ref role_str) = body.role {
+        let role = match TeamMemberRole::from_str_opt(role_str) {
+            Some(r) => r,
+            None => {
+                return err(
+                    StatusCode::BAD_REQUEST,
+                    "VALIDATION_ERROR",
+                    "Invalid role. Must be: lead, builder, or advisor",
+                )
+                .into_response();
+            }
+        };
+        member_repo
+            .update_role(id, uid, role, body.role_label.as_deref())
+            .await
+    } else if body.role_label.is_some() {
+        member_repo
+            .update_role_label(id, uid, body.role_label.as_deref())
+            .await
+    } else {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "At least one of role or role_label must be provided",
+        )
+        .into_response();
+    };
+
+    match result {
+        Ok(member) => Json(TeamMemberResponse {
+            id: member.id,
+            idea_id: member.idea_id,
+            user_id: member.user_id,
+            role: member.role.to_string(),
+            role_label: member.role_label,
+            joined_at: member.joined_at.to_rfc3339(),
+        })
+        .into_response(),
+        Err(sea_orm::DbErr::RecordNotFound(_)) => {
+            err(
+                StatusCode::NOT_FOUND,
+                "NOT_FOUND",
+                "Team member not found",
+            )
+            .into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to update team role: {e}");
             err(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "INTERNAL_ERROR",
