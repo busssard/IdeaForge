@@ -14,3 +14,7 @@ pub mod subscribe_button;
 pub mod share_buttons;
 pub mod visibility_badge;
 pub mod onboarding_checklist;
+pub mod nda_wall;
+pub mod notification_bell;
+pub mod bot_section;
+pub mod task_board;

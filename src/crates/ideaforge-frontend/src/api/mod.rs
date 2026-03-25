@@ -8,3 +8,7 @@ pub mod users;
 pub mod contributions;
 pub mod team;
 pub mod subscriptions;
+pub mod bots;
+pub mod nda;
+pub mod notifications;
+pub mod board;

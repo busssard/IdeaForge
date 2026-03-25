@@ -45,6 +45,10 @@ pub struct IdeaResponse {
     pub stoke_count: i32,
     #[serde(default)]
     pub has_stoked: Option<bool>,
+    #[serde(default)]
+    pub nda_required: Option<bool>,
+    #[serde(default)]
+    pub nda_signed: Option<bool>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -259,6 +263,7 @@ pub struct TeamMemberResponse {
     pub user_id: String,
     pub display_name: String,
     pub role: String,
+    pub role_label: Option<String>,
     pub joined_at: String,
 }
 
@@ -270,6 +275,136 @@ pub struct SubscriptionResponse {
     pub user_id: String,
     pub idea_id: String,
     pub created_at: String,
+}
+
+// --- Bots ---
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BotProfileResponse {
+    pub id: String,
+    pub username: String,
+    pub operator: Option<String>,
+    pub description: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BotListResponse {
+    pub data: Vec<BotProfileResponse>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EndorsementResponse {
+    pub id: String,
+    pub bot_id: String,
+    pub idea_id: String,
+    pub reason: String,
+    pub created_at: String,
+}
+
+// --- Notifications ---
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct NotificationResponse {
+    pub id: String,
+    pub user_id: String,
+    pub kind: String,
+    pub title: String,
+    pub message: String,
+    pub link_url: Option<String>,
+    pub read_at: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct NotificationListResponse {
+    pub data: Vec<NotificationResponse>,
+    pub meta: PaginationMeta,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UnreadCountResponse {
+    pub unread_count: u64,
+}
+
+// --- NDA ---
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct NdaTemplateResponse {
+    pub id: String,
+    pub idea_id: String,
+    pub title: String,
+    pub body: String,
+    pub confidentiality_period_days: i32,
+    pub jurisdiction: Option<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SignNdaRequest {
+    pub signer_name: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct NdaStatusResponse {
+    pub has_signed: bool,
+    pub signed_at: Option<String>,
+    pub expires_at: Option<String>,
+}
+
+// --- Board Tasks ---
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TaskResponse {
+    pub id: String,
+    pub idea_id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub status: String,
+    pub priority: String,
+    pub assignee_id: Option<String>,
+    pub created_by: String,
+    pub skill_tags: Vec<String>,
+    pub due_date: Option<String>,
+    pub position: i32,
+    pub created_at: String,
+    pub updated_at: String,
+    pub completed_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BoardResponse {
+    pub idea_id: String,
+    pub columns: BoardColumns,
+    pub total_tasks: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BoardColumns {
+    pub open: Vec<TaskResponse>,
+    pub assigned: Vec<TaskResponse>,
+    pub in_review: Vec<TaskResponse>,
+    pub done: Vec<TaskResponse>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CreateTaskRequest {
+    pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub priority: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assignee_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skill_tags: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub due_date: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct UpdateTaskStatusRequest {
+    pub status: String,
 }
 
 // --- Errors ---
