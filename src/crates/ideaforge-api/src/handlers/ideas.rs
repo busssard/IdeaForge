@@ -11,10 +11,11 @@ use uuid::Uuid;
 use crate::extractors::{AuthUser, OptionalAuth};
 use crate::state::AppState;
 use ideaforge_db::entities::enums::{ContributionKind, IdeaMaturity, IdeaOpenness, UserRole};
-use ideaforge_db::entities::stoke;
+use ideaforge_db::entities::{idea, nda_signature, stoke};
 use ideaforge_db::repositories::contribution_repo::ContributionRepository;
 use ideaforge_db::repositories::idea_repo::IdeaRepository;
 use ideaforge_db::repositories::invite_link_repo::InviteLinkRepository;
+use ideaforge_db::repositories::nda_repo::NdaSignatureRepository;
 use ideaforge_db::repositories::stoke_repo::StokeRepository;
 use ideaforge_db::repositories::team_repo::TeamMemberRepository;
 use sea_orm::*;
@@ -76,6 +77,8 @@ pub struct IdeaResponse {
     pub category_id: Option<Uuid>,
     pub stoke_count: i32,
     pub has_stoked: bool,
+    pub nda_required: bool,
+    pub nda_signed: bool,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -151,7 +154,12 @@ fn err(status: StatusCode, code: &str, message: &str) -> impl IntoResponse {
         .into_response()
 }
 
-fn idea_response(m: &ideaforge_db::entities::idea::Model, has_stoked: bool) -> IdeaResponse {
+fn idea_response(
+    m: &ideaforge_db::entities::idea::Model,
+    has_stoked: bool,
+    nda_required: bool,
+    nda_signed: bool,
+) -> IdeaResponse {
     IdeaResponse {
         id: m.id,
         author_id: m.author_id,
@@ -163,10 +171,16 @@ fn idea_response(m: &ideaforge_db::entities::idea::Model, has_stoked: bool) -> I
         category_id: m.category_id,
         stoke_count: m.stoke_count,
         has_stoked,
+        nda_required,
+        nda_signed,
         created_at: m.created_at.to_rfc3339(),
         updated_at: m.updated_at.to_rfc3339(),
     }
 }
+
+/// NDA redaction placeholder for descriptions behind NDA protection.
+const NDA_REDACTION_MESSAGE: &str =
+    "[NDA Required] Sign the NDA to view the full pitch.";
 
 fn parse_contribution_kind(s: &str) -> Option<ContributionKind> {
     match s {
@@ -211,13 +225,14 @@ async fn list_ideas(
         .await
     {
         Ok((ideas, total)) => {
+            let idea_ids: Vec<Uuid> = ideas.iter().map(|i| i.id).collect();
+
             // Batch-check which ideas the user has stoked
             let stoked_set = if let OptionalAuth(Some(ref auth)) = opt_auth {
-                let idea_ids: Vec<Uuid> = ideas.iter().map(|i| i.id).collect();
                 if !idea_ids.is_empty() {
                     match stoke::Entity::find()
                         .filter(stoke::Column::UserId.eq(auth.user_id))
-                        .filter(stoke::Column::IdeaId.is_in(idea_ids))
+                        .filter(stoke::Column::IdeaId.is_in(idea_ids.clone()))
                         .all(state.db.connection())
                         .await
                     {
@@ -234,9 +249,57 @@ async fn list_ideas(
                 std::collections::HashSet::new()
             };
 
+            // Batch-check NDA signatures for NDA-protected ideas
+            let nda_idea_ids: Vec<Uuid> = ideas
+                .iter()
+                .filter(|i| i.openness == IdeaOpenness::NdaProtected)
+                .map(|i| i.id)
+                .collect();
+            let nda_signed_set = if let OptionalAuth(Some(ref auth)) = opt_auth {
+                if !nda_idea_ids.is_empty() {
+                    match nda_signature::Entity::find()
+                        .filter(nda_signature::Column::SignerId.eq(auth.user_id))
+                        .filter(nda_signature::Column::IdeaId.is_in(nda_idea_ids))
+                        .filter(nda_signature::Column::RevokedAt.is_null())
+                        .all(state.db.connection())
+                        .await
+                    {
+                        Ok(sigs) => sigs.iter().map(|s| s.idea_id).collect::<std::collections::HashSet<_>>(),
+                        Err(e) => {
+                            tracing::warn!("Failed to check NDA signatures: {e}");
+                            std::collections::HashSet::new()
+                        }
+                    }
+                } else {
+                    std::collections::HashSet::new()
+                }
+            } else {
+                std::collections::HashSet::new()
+            };
+
+            let current_user_id = opt_auth.0.as_ref().map(|a| a.user_id);
+
             let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
             Json(IdeaListResponse {
-                data: ideas.iter().map(|i| idea_response(i, stoked_set.contains(&i.id))).collect(),
+                data: ideas
+                    .iter()
+                    .map(|i| {
+                        let is_nda = i.openness == IdeaOpenness::NdaProtected;
+                        let is_author = current_user_id == Some(i.author_id);
+                        let nda_signed = nda_signed_set.contains(&i.id);
+                        let mut resp = idea_response(
+                            i,
+                            stoked_set.contains(&i.id),
+                            is_nda,
+                            nda_signed,
+                        );
+                        // Redact description for NDA ideas unless author or signed
+                        if is_nda && !is_author && !nda_signed {
+                            resp.description = NDA_REDACTION_MESSAGE.to_string();
+                        }
+                        resp
+                    })
+                    .collect(),
                 meta: PaginationMeta {
                     total,
                     page,
@@ -307,15 +370,46 @@ async fn create_idea(
         Some("collaborative") => IdeaOpenness::Collaborative,
         Some("commercial") => IdeaOpenness::Commercial,
         Some("private") => IdeaOpenness::Private,
+        Some("nda_protected") => IdeaOpenness::NdaProtected,
         Some(_) => {
             return err(
                 StatusCode::BAD_REQUEST,
                 "VALIDATION_ERROR",
-                "Invalid openness. Must be: open, collaborative, commercial, or private",
+                "Invalid openness. Must be: open, collaborative, commercial, private, or nda_protected",
             )
             .into_response();
         }
     };
+
+    // Enforce free tier limit for NDA-protected ideas
+    if openness == IdeaOpenness::NdaProtected {
+        let nda_count = idea::Entity::find()
+            .filter(idea::Column::AuthorId.eq(auth.user_id))
+            .filter(idea::Column::Openness.eq(IdeaOpenness::NdaProtected))
+            .filter(idea::Column::ArchivedAt.is_null())
+            .count(state.db.connection())
+            .await;
+        match nda_count {
+            Ok(count) if count >= 1 => {
+                return err(
+                    StatusCode::FORBIDDEN,
+                    "FREE_TIER_LIMIT",
+                    "Free tier allows 1 NDA-protected idea. Upgrade to create more.",
+                )
+                .into_response();
+            }
+            Err(e) => {
+                tracing::error!("Failed to count NDA ideas: {e}");
+                return err(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "INTERNAL_ERROR",
+                    "Internal server error",
+                )
+                .into_response();
+            }
+            _ => {}
+        }
+    }
 
     let repo = IdeaRepository::new(state.db.connection());
     match repo
@@ -331,7 +425,10 @@ async fn create_idea(
         )
         .await
     {
-        Ok(idea) => (StatusCode::CREATED, Json(idea_response(&idea, false))).into_response(),
+        Ok(idea) => {
+            let is_nda = idea.openness == IdeaOpenness::NdaProtected;
+            (StatusCode::CREATED, Json(idea_response(&idea, false, is_nda, false))).into_response()
+        }
         Err(e) => {
             tracing::error!("Failed to create idea: {e}");
             err(
@@ -403,7 +500,48 @@ async fn get_idea(
             } else {
                 false
             };
-            Json(idea_response(&idea, has_stoked)).into_response()
+
+            let is_nda = idea.openness == IdeaOpenness::NdaProtected;
+            let mut nda_signed = false;
+
+            // For NDA-protected ideas, check access and potentially redact
+            if is_nda {
+                let is_author = opt_auth
+                    .0
+                    .as_ref()
+                    .map_or(false, |auth| auth.user_id == idea.author_id);
+                let is_team = if let OptionalAuth(Some(ref auth)) = opt_auth {
+                    if !is_author {
+                        let team_repo = TeamMemberRepository::new(state.db.connection());
+                        team_repo.exists(auth.user_id, id).await.unwrap_or(false)
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                };
+
+                if !is_author && !is_team {
+                    // Check NDA signature
+                    if let OptionalAuth(Some(ref auth)) = opt_auth {
+                        let sig_repo = NdaSignatureRepository::new(state.db.connection());
+                        nda_signed = sig_repo
+                            .has_signed(auth.user_id, id)
+                            .await
+                            .unwrap_or(false);
+                    }
+                    if !nda_signed {
+                        let mut resp = idea_response(&idea, has_stoked, true, false);
+                        resp.description = NDA_REDACTION_MESSAGE.to_string();
+                        return Json(resp).into_response();
+                    }
+                } else {
+                    // Author or team member - they have access, mark nda_signed as true conceptually
+                    nda_signed = true;
+                }
+            }
+
+            Json(idea_response(&idea, has_stoked, is_nda, nda_signed)).into_response()
         }
         Ok(None) => err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response(),
         Err(e) => {
@@ -474,7 +612,7 @@ async fn update_idea(
                 return err(
                     StatusCode::BAD_REQUEST,
                     "VALIDATION_ERROR",
-                    "Invalid openness. Must be: open, collaborative, commercial, or private",
+                    "Invalid openness. Must be: open, collaborative, commercial, private, or nda_protected",
                 )
                 .into_response();
             }
@@ -493,7 +631,10 @@ async fn update_idea(
         )
         .await
     {
-        Ok(idea) => Json(idea_response(&idea, false)).into_response(),
+        Ok(idea) => {
+            let is_nda = idea.openness == IdeaOpenness::NdaProtected;
+            Json(idea_response(&idea, false, is_nda, is_nda)).into_response()
+        }
         Err(e) => {
             tracing::error!("Failed to update idea: {e}");
             err(
@@ -931,9 +1072,45 @@ async fn list_my_stoked_ideas(
         }
     };
 
+    // Batch-check NDA signatures for NDA-protected stoked ideas
+    let nda_stoked_ids: Vec<Uuid> = ideas
+        .iter()
+        .filter(|i| i.openness == IdeaOpenness::NdaProtected)
+        .map(|i| i.id)
+        .collect();
+    let nda_signed_set = if !nda_stoked_ids.is_empty() {
+        match nda_signature::Entity::find()
+            .filter(nda_signature::Column::SignerId.eq(auth.user_id))
+            .filter(nda_signature::Column::IdeaId.is_in(nda_stoked_ids))
+            .filter(nda_signature::Column::RevokedAt.is_null())
+            .all(state.db.connection())
+            .await
+        {
+            Ok(sigs) => sigs.iter().map(|s| s.idea_id).collect::<std::collections::HashSet<_>>(),
+            Err(e) => {
+                tracing::warn!("Failed to check NDA signatures for stoked ideas: {e}");
+                std::collections::HashSet::new()
+            }
+        }
+    } else {
+        std::collections::HashSet::new()
+    };
+
     let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
     Json(IdeaListResponse {
-        data: ideas.iter().map(|i| idea_response(i, true)).collect(),
+        data: ideas
+            .iter()
+            .map(|i| {
+                let is_nda = i.openness == IdeaOpenness::NdaProtected;
+                let is_author = i.author_id == auth.user_id;
+                let nda_signed = nda_signed_set.contains(&i.id);
+                let mut resp = idea_response(i, true, is_nda, nda_signed || is_author);
+                if is_nda && !is_author && !nda_signed {
+                    resp.description = NDA_REDACTION_MESSAGE.to_string();
+                }
+                resp
+            })
+            .collect(),
         meta: PaginationMeta {
             total,
             page,

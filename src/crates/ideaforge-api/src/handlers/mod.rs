@@ -1,6 +1,8 @@
 pub mod auth;
+pub mod board;
 pub mod bots;
 pub mod ideas;
+pub mod nda;
 pub mod team;
 pub mod categories;
 pub mod users;

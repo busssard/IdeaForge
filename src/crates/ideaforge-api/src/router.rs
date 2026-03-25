@@ -30,6 +30,8 @@ fn api_routes() -> Router<AppState> {
         .nest("/ideas", handlers::team::routes())
         .nest("/ideas", handlers::subscriptions::routes())
         .nest("/ideas", handlers::invites::routes())
+        .nest("/ideas", handlers::board::routes())
+        .nest("/ideas", handlers::nda::routes())
         .nest("/categories", handlers::categories::routes())
         .nest("/users", handlers::users::routes())
         .nest("/skills", handlers::skills::routes())
