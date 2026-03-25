@@ -11,6 +11,7 @@ mod m20260212_000003_create_subscriptions;
 mod m20260212_100001_phase2_extensions;
 mod m20260325_000001_nda_system;
 mod m20260325_000002_task_boards_and_team_labels;
+mod m20260325_000003_task_budget;
 
 pub struct Migrator;
 
@@ -29,6 +30,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260212_100001_phase2_extensions::Migration),
             Box::new(m20260325_000001_nda_system::Migration),
             Box::new(m20260325_000002_task_boards_and_team_labels::Migration),
+            Box::new(m20260325_000003_task_budget::Migration),
         ]
     }
 }

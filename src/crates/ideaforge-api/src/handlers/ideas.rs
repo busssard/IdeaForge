@@ -182,6 +182,10 @@ fn idea_response(
 const NDA_REDACTION_MESSAGE: &str =
     "[NDA Required] Sign the NDA to view the full pitch.";
 
+/// Redaction placeholder for commercial ideas when the user is not authenticated.
+const COMMERCIAL_REDACTION_MESSAGE: &str =
+    "[Login Required] Sign in to view the full pitch for this commercial idea.";
+
 fn parse_contribution_kind(s: &str) -> Option<ContributionKind> {
     match s {
         "comment" => Some(ContributionKind::Comment),
@@ -296,6 +300,10 @@ async fn list_ideas(
                         // Redact description for NDA ideas unless author or signed
                         if is_nda && !is_author && !nda_signed {
                             resp.description = NDA_REDACTION_MESSAGE.to_string();
+                        }
+                        // Redact description for commercial ideas if user is not authenticated
+                        if i.openness == IdeaOpenness::Commercial && current_user_id.is_none() {
+                            resp.description = COMMERCIAL_REDACTION_MESSAGE.to_string();
                         }
                         resp
                     })
@@ -538,6 +546,17 @@ async fn get_idea(
                 } else {
                     // Author or team member - they have access, mark nda_signed as true conceptually
                     nda_signed = true;
+                }
+            }
+
+            // For commercial ideas, redact description if user is not authenticated
+            // (authors and team members always see full content, but they must be logged in)
+            if idea.openness == IdeaOpenness::Commercial {
+                let is_authenticated = opt_auth.0.is_some();
+                if !is_authenticated {
+                    let mut resp = idea_response(&idea, has_stoked, is_nda, nda_signed);
+                    resp.description = COMMERCIAL_REDACTION_MESSAGE.to_string();
+                    return Json(resp).into_response();
                 }
             }
 
@@ -1108,6 +1127,8 @@ async fn list_my_stoked_ideas(
                 if is_nda && !is_author && !nda_signed {
                     resp.description = NDA_REDACTION_MESSAGE.to_string();
                 }
+                // Note: commercial redaction not needed here — AuthUser guarantees authentication.
+                // Authors and team members always see full content.
                 resp
             })
             .collect(),

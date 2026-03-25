@@ -49,6 +49,8 @@ pub struct CreateTaskRequest {
     pub assignee_id: Option<Uuid>,
     pub skill_tags: Option<Vec<String>>,
     pub due_date: Option<String>,
+    pub budget_cents: Option<i64>,
+    pub currency: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,6 +62,8 @@ pub struct UpdateTaskRequest {
     pub skill_tags: Option<Vec<String>>,
     pub due_date: Option<Option<String>>,
     pub position: Option<i32>,
+    pub budget_cents: Option<i64>,
+    pub currency: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -88,6 +92,8 @@ pub struct TaskResponse {
     pub skill_tags: Vec<String>,
     pub due_date: Option<String>,
     pub position: i32,
+    pub budget_cents: i64,
+    pub currency: String,
     pub created_at: String,
     pub updated_at: String,
     pub completed_at: Option<String>,
@@ -98,6 +104,7 @@ pub struct BoardResponse {
     pub idea_id: Uuid,
     pub columns: BoardColumns,
     pub total_tasks: u64,
+    pub total_budget_cents: i64,
 }
 
 #[derive(Debug, Serialize)]
@@ -152,6 +159,8 @@ fn task_response(m: &board_task::Model) -> TaskResponse {
         skill_tags,
         due_date: m.due_date.map(|d| d.to_string()),
         position: m.position,
+        budget_cents: m.budget_cents,
+        currency: m.currency.clone(),
         created_at: m.created_at.to_rfc3339(),
         updated_at: m.updated_at.to_rfc3339(),
         completed_at: m.completed_at.map(|dt| dt.to_rfc3339()),
@@ -216,6 +225,7 @@ async fn get_board(
     match task_repo.list_all_for_idea(id).await {
         Ok(tasks) => {
             let total_tasks = tasks.len() as u64;
+            let total_budget_cents: i64 = tasks.iter().map(|t| t.budget_cents).sum();
             let mut open = Vec::new();
             let mut assigned = Vec::new();
             let mut in_review = Vec::new();
@@ -240,6 +250,7 @@ async fn get_board(
                     done,
                 },
                 total_tasks,
+                total_budget_cents,
             })
             .into_response()
         }
@@ -422,6 +433,9 @@ async fn create_task(
         .map(|tags| serde_json::json!(tags))
         .unwrap_or(serde_json::json!([]));
 
+    let budget_cents = body.budget_cents.unwrap_or(0);
+    let currency = body.currency.as_deref().unwrap_or("USD");
+
     match task_repo
         .create(
             Uuid::new_v4(),
@@ -434,6 +448,8 @@ async fn create_task(
             skill_tags,
             due_date,
             position,
+            budget_cents,
+            currency,
         )
         .await
     {
@@ -628,6 +644,8 @@ async fn update_task(
             skill_tags,
             due_date,
             body.position,
+            body.budget_cents,
+            body.currency.as_deref(),
         )
         .await
     {

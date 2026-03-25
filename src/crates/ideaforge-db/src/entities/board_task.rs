@@ -20,6 +20,9 @@ pub struct Model {
     pub skill_tags: serde_json::Value,
     pub due_date: Option<Date>,
     pub position: i32,
+    pub budget_cents: i64,
+    #[sea_orm(column_type = "String(StringLen::N(3))")]
+    pub currency: String,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
     pub completed_at: Option<DateTimeWithTimeZone>,

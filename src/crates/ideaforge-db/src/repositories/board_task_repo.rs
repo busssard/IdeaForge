@@ -26,6 +26,8 @@ impl<'a> BoardTaskRepository<'a> {
         skill_tags: serde_json::Value,
         due_date: Option<chrono::NaiveDate>,
         position: i32,
+        budget_cents: i64,
+        currency: &str,
     ) -> Result<board_task::Model, DbErr> {
         let now = chrono::Utc::now().fixed_offset();
         let status = if assignee_id.is_some() {
@@ -45,6 +47,8 @@ impl<'a> BoardTaskRepository<'a> {
             skill_tags: Set(skill_tags),
             due_date: Set(due_date),
             position: Set(position),
+            budget_cents: Set(budget_cents),
+            currency: Set(currency.to_string()),
             created_at: Set(now),
             updated_at: Set(now),
             completed_at: Set(None),
@@ -139,6 +143,8 @@ impl<'a> BoardTaskRepository<'a> {
         skill_tags: Option<serde_json::Value>,
         due_date: Option<Option<chrono::NaiveDate>>,
         position: Option<i32>,
+        budget_cents: Option<i64>,
+        currency: Option<&str>,
     ) -> Result<board_task::Model, DbErr> {
         let model = board_task::Entity::find_by_id(id)
             .one(self.db)
@@ -167,6 +173,12 @@ impl<'a> BoardTaskRepository<'a> {
         }
         if let Some(p) = position {
             active.position = Set(p);
+        }
+        if let Some(b) = budget_cents {
+            active.budget_cents = Set(b);
+        }
+        if let Some(c) = currency {
+            active.currency = Set(c.to_string());
         }
 
         active.updated_at = Set(chrono::Utc::now().fixed_offset());
