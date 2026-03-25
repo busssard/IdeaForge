@@ -68,7 +68,7 @@ pub fn StokeButton(
             on:click=toggle
             disabled=move || loading.get()
         >
-            <span class="flame">{move || if stoked.get() { "\u{1F525}" } else { "\u{1F4A7}" }}</span>
+            <span class="flame">{move || if stoked.get() { "\u{1F525}" } else { "\u{1FAB5}" }}</span>
             <span>{move || count.get().to_string()}</span>
         </button>
     }

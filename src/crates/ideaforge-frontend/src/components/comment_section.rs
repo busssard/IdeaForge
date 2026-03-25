@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+
 use leptos::prelude::*;
+use leptos_router::components::A;
 use wasm_bindgen::JsCast;
 
 use crate::api;
@@ -12,16 +15,42 @@ pub fn CommentSection(idea_id: String) -> impl IntoView {
     let loading = RwSignal::new(true);
     let error = RwSignal::new(String::new());
     let submit_loading = RwSignal::new(false);
+    let user_names: RwSignal<HashMap<String, String>> = RwSignal::new(HashMap::new());
 
     let idea_id_stored = StoredValue::new(idea_id.clone());
     let textarea_ref = NodeRef::<leptos::html::Textarea>::new();
 
-    // Load comments on mount
+    // Load comments on mount, then fetch display names
     {
         let idea_id = idea_id.clone();
         wasm_bindgen_futures::spawn_local(async move {
             match api::contributions::list_contributions(&idea_id, Some("comment"), 1, 50).await {
-                Ok(resp) => comments.set(resp.data),
+                Ok(resp) => {
+                    // Collect unique user IDs
+                    let unique_ids: Vec<String> = {
+                        let mut ids = Vec::new();
+                        for c in &resp.data {
+                            if !ids.contains(&c.user_id) {
+                                ids.push(c.user_id.clone());
+                            }
+                        }
+                        ids
+                    };
+
+                    comments.set(resp.data);
+
+                    // Fetch display names for each unique user
+                    for uid in unique_ids {
+                        let uid_clone = uid.clone();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            if let Ok(profile) = api::users::get_user(&uid_clone).await {
+                                user_names.update(|map| {
+                                    map.insert(uid_clone, profile.display_name);
+                                });
+                            }
+                        });
+                    }
+                }
                 Err(e) => error.set(e.message),
             }
             loading.set(false);
@@ -57,6 +86,20 @@ pub fn CommentSection(idea_id: String) -> impl IntoView {
             };
             match api::contributions::create_contribution(&idea_id, req).await {
                 Ok(comment) => {
+                    // Fetch the display name for the new comment's author
+                    let new_uid = comment.user_id.clone();
+                    let names = user_names.get_untracked();
+                    if !names.contains_key(&new_uid) {
+                        let uid_clone = new_uid.clone();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            if let Ok(profile) = api::users::get_user(&uid_clone).await {
+                                user_names.update(|map| {
+                                    map.insert(uid_clone, profile.display_name);
+                                });
+                            }
+                        });
+                    }
+
                     comments.update(|c| c.push(comment));
                     // Clear textarea
                     if let Some(el) = textarea_ref.get() {
@@ -90,6 +133,7 @@ pub fn CommentSection(idea_id: String) -> impl IntoView {
                     view! { <p class="text-muted">"Loading comments..."</p> }.into_any()
                 } else {
                     let items = comments.get();
+                    let names = user_names.get();
                     if items.is_empty() {
                         view! { <p class="text-muted">"No comments yet. Be the first!"</p> }.into_any()
                     } else {
@@ -104,9 +148,17 @@ pub fn CommentSection(idea_id: String) -> impl IntoView {
                                             .next()
                                             .unwrap_or("")
                                             .to_string();
+                                        let display_name = names
+                                            .get(&c.user_id)
+                                            .cloned()
+                                            .unwrap_or_else(|| "Anonymous".to_string());
+                                        let profile_url = format!("/profile/{}", c.user_id);
                                         view! {
                                             <div class="comment-item card">
                                                 <div class="comment-meta">
+                                                    <A href=profile_url attr:class="comment-author">
+                                                        {display_name}
+                                                    </A>
                                                     <span class="comment-date">{date}</span>
                                                 </div>
                                                 <p class="comment-body">{c.body.clone()}</p>

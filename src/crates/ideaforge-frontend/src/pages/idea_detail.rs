@@ -3,6 +3,7 @@ use leptos_router::hooks::use_params_map;
 use leptos_router::components::A;
 
 use crate::api;
+use crate::api::types::UpdateIdeaRequest;
 use crate::components::bot_section::BotSection;
 use crate::components::comment_section::CommentSection;
 use crate::components::loading::Loading;
@@ -15,6 +16,7 @@ use crate::components::suggestion_section::SuggestionSection;
 use crate::components::task_board::TaskBoard;
 use crate::components::team_panel::TeamPanel;
 use crate::components::visibility_badge::VisibilityBadge;
+use crate::state::auth::AuthState;
 
 #[component]
 pub fn IdeaDetailPage() -> impl IntoView {
@@ -70,10 +72,88 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                 && !nda_signed
                                 && idea.description.contains("[NDA Required]");
 
+                            // Check if current user is the author
+                            let author_id_check = idea.author_id.clone();
+                            let auth = expect_context::<AuthState>();
+                            let is_author = auth
+                                .user
+                                .get_untracked()
+                                .map_or(false, |u| u.id == author_id_check);
+
+                            // Editing state
+                            let editing = RwSignal::new(false);
+                            let edit_saving = RwSignal::new(false);
+                            let edit_error = RwSignal::new(String::new());
+
+                            // Pre-fill edit fields
+                            let edit_title = RwSignal::new(idea.title.clone());
+                            let edit_summary = RwSignal::new(idea.summary.clone());
+                            let edit_description = RwSignal::new(idea.description.clone());
+                            let edit_openness = RwSignal::new(idea.openness.clone());
+
+                            let idea_id_edit = idea.id.clone();
+                            let refetch = refetch_trigger;
+                            let on_save = move |ev: web_sys::SubmitEvent| {
+                                ev.prevent_default();
+                                if edit_saving.get_untracked() {
+                                    return;
+                                }
+
+                                edit_saving.set(true);
+                                edit_error.set(String::new());
+                                let id = idea_id_edit.clone();
+                                let req = UpdateIdeaRequest {
+                                    title: Some(edit_title.get_untracked()),
+                                    summary: Some(edit_summary.get_untracked()),
+                                    description: Some(edit_description.get_untracked()),
+                                    openness: Some(edit_openness.get_untracked()),
+                                    category_id: None,
+                                };
+
+                                wasm_bindgen_futures::spawn_local(async move {
+                                    match api::ideas::update_idea(&id, req).await {
+                                        Ok(_) => {
+                                            editing.set(false);
+                                            refetch.set(refetch.get_untracked() + 1);
+                                        }
+                                        Err(e) => edit_error.set(e.message),
+                                    }
+                                    edit_saving.set(false);
+                                });
+                            };
+
+                            let on_cancel = move |_: web_sys::MouseEvent| {
+                                editing.set(false);
+                                edit_error.set(String::new());
+                            };
+
                             view! {
                                 <div class="idea-detail">
                                     <div class="idea-detail-header">
-                                        <h1 class="idea-detail-title">{idea.title.clone()}</h1>
+                                        // Title: editable or static
+                                        {move || {
+                                            if editing.get() {
+                                                view! {
+                                                    <input
+                                                        class="form-input idea-edit-title"
+                                                        type="text"
+                                                        value=edit_title.get_untracked()
+                                                        on:input=move |ev| {
+                                                            edit_title.set(event_target_value(&ev));
+                                                        }
+                                                    />
+                                                }
+                                                    .into_any()
+                                            } else {
+                                                view! {
+                                                    <h1 class="idea-detail-title">
+                                                        {idea.title.clone()}
+                                                    </h1>
+                                                }
+                                                    .into_any()
+                                            }
+                                        }}
+
                                         <div class="idea-detail-badges">
                                             <MaturityBadge maturity=idea.maturity.clone() />
                                             <VisibilityBadge openness=openness_for_badge />
@@ -87,15 +167,174 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                             </span>
                                             <span>"Created " {created_date}</span>
                                             <span>"Updated " {updated_date}</span>
+                                            // Edit button for author
+                                            {is_author.then(|| {
+                                                view! {
+                                                    <button
+                                                        class="btn btn-ghost btn-sm"
+                                                        on:click=move |_| {
+                                                            editing.set(!editing.get_untracked());
+                                                        }
+                                                    >
+                                                        {move || {
+                                                            if editing.get() {
+                                                                "Cancel Edit"
+                                                            } else {
+                                                                "\u{270F}\u{FE0F} Edit"
+                                                            }
+                                                        }}
+                                                    </button>
+                                                }
+                                            })}
                                         </div>
                                     </div>
 
-                                    <div class="card mb-lg">
-                                        <h4>"Summary"</h4>
-                                        <p class="mt-sm" style="color: var(--text-secondary)">
-                                            {idea.summary.clone()}
-                                        </p>
-                                    </div>
+                                    // Edit form for summary, description, openness
+                                    {move || {
+                                        if editing.get() {
+                                            view! {
+                                                <form
+                                                    class="idea-edit-form card mb-lg"
+                                                    on:submit=on_save
+                                                >
+                                                    // Edit error
+                                                    {move || {
+                                                        let err = edit_error.get();
+                                                        if err.is_empty() {
+                                                            view! { <div></div> }.into_any()
+                                                        } else {
+                                                            view! {
+                                                                <div class="form-error">{err}</div>
+                                                            }
+                                                                .into_any()
+                                                        }
+                                                    }}
+
+                                                    <div class="form-group">
+                                                        <label class="form-label">"Summary"</label>
+                                                        <textarea
+                                                            class="form-input"
+                                                            rows="2"
+                                                            on:input=move |ev| {
+                                                                edit_summary
+                                                                    .set(event_target_value(&ev));
+                                                            }
+                                                        >
+                                                            {edit_summary.get_untracked()}
+                                                        </textarea>
+                                                    </div>
+
+                                                    <div class="form-group">
+                                                        <label class="form-label">
+                                                            "Description"
+                                                        </label>
+                                                        <textarea
+                                                            class="form-input"
+                                                            rows="10"
+                                                            on:input=move |ev| {
+                                                                edit_description
+                                                                    .set(event_target_value(&ev));
+                                                            }
+                                                        >
+                                                            {edit_description.get_untracked()}
+                                                        </textarea>
+                                                    </div>
+
+                                                    <div class="form-group">
+                                                        <label class="form-label">"Openness"</label>
+                                                        <select
+                                                            class="form-select"
+                                                            on:change=move |ev| {
+                                                                edit_openness
+                                                                    .set(event_target_value(&ev));
+                                                            }
+                                                        >
+                                                            <option
+                                                                value="open"
+                                                                selected=move || {
+                                                                    edit_openness.get() == "open"
+                                                                }
+                                                            >
+                                                                "Open"
+                                                            </option>
+                                                            <option
+                                                                value="collaborative"
+                                                                selected=move || {
+                                                                    edit_openness.get()
+                                                                        == "collaborative"
+                                                                }
+                                                            >
+                                                                "Collaborative"
+                                                            </option>
+                                                            <option
+                                                                value="commercial"
+                                                                selected=move || {
+                                                                    edit_openness.get()
+                                                                        == "commercial"
+                                                                }
+                                                            >
+                                                                "Commercial"
+                                                            </option>
+                                                            <option
+                                                                value="private"
+                                                                selected=move || {
+                                                                    edit_openness.get() == "private"
+                                                                }
+                                                            >
+                                                                "Private"
+                                                            </option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div class="idea-edit-actions">
+                                                        <button
+                                                            class="btn btn-primary btn-sm"
+                                                            type="submit"
+                                                            disabled=move || edit_saving.get()
+                                                        >
+                                                            {move || {
+                                                                if edit_saving.get() {
+                                                                    "Saving..."
+                                                                } else {
+                                                                    "Save Changes"
+                                                                }
+                                                            }}
+                                                        </button>
+                                                        <button
+                                                            class="btn btn-ghost btn-sm"
+                                                            type="button"
+                                                            on:click=on_cancel
+                                                        >
+                                                            "Cancel"
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            }
+                                                .into_any()
+                                        } else {
+                                            view! { <div></div> }.into_any()
+                                        }
+                                    }}
+
+                                    // Summary card (only in view mode)
+                                    {move || {
+                                        if !editing.get() {
+                                            view! {
+                                                <div class="card mb-lg">
+                                                    <h4>"Summary"</h4>
+                                                    <p
+                                                        class="mt-sm"
+                                                        style="color: var(--text-secondary)"
+                                                    >
+                                                        {idea.summary.clone()}
+                                                    </p>
+                                                </div>
+                                            }
+                                                .into_any()
+                                        } else {
+                                            view! { <div></div> }.into_any()
+                                        }
+                                    }}
 
                                     {if show_nda_wall {
                                         view! {
@@ -110,9 +349,19 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                             .into_any()
                                     } else {
                                         view! {
-                                            <div class="idea-detail-body">
-                                                {idea.description.clone()}
-                                            </div>
+                                            // Description (only in view mode)
+                                            {move || {
+                                                if !editing.get() {
+                                                    view! {
+                                                        <div class="idea-detail-body">
+                                                            {idea.description.clone()}
+                                                        </div>
+                                                    }
+                                                        .into_any()
+                                                } else {
+                                                    view! { <div></div> }.into_any()
+                                                }
+                                            }}
 
                                             <div class="idea-detail-actions">
                                                 <StokeButton

@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 use leptos_router::components::A;
 
+use crate::api;
 use crate::state::auth::AuthState;
 
 /// Onboarding checklist banner for new users.
@@ -14,6 +15,34 @@ pub fn OnboardingChecklist() -> impl IntoView {
     let has_profile = Signal::derive(move || {
         auth.user.get().map_or(false, |u| !u.display_name.is_empty())
     });
+
+    // Track whether user has created at least one idea
+    let has_idea = RwSignal::new(false);
+    // Track whether user has stoked at least one idea
+    let has_stoke = RwSignal::new(false);
+    // Track whether user has visited the people page (via localStorage)
+    let has_visited_people = RwSignal::new(check_visited_people());
+
+    // Fetch idea count and stoke count on mount
+    {
+        let user_signal = auth.user;
+        wasm_bindgen_futures::spawn_local(async move {
+            let user_id = user_signal.get_untracked().map(|u| u.id).unwrap_or_default();
+            if user_id.is_empty() {
+                return;
+            }
+
+            // Check if user has created any ideas
+            if let Ok(resp) = api::ideas::list_ideas(1, 1, None, None, None, Some(&user_id)).await {
+                has_idea.set(resp.meta.total > 0);
+            }
+
+            // Check if user has stoked any ideas
+            if let Ok(resp) = api::ideas::list_my_stoked_ideas(1, 1).await {
+                has_stoke.set(resp.meta.total > 0);
+            }
+        });
+    }
 
     let dismiss = move |_: web_sys::MouseEvent| {
         set_dismissed();
@@ -29,8 +58,14 @@ pub fn OnboardingChecklist() -> impl IntoView {
                 view! { <div></div> }.into_any()
             } else {
                 let profile_done = has_profile.get();
-                // Simple checklist - these are tracked client-side
-                let steps_done = if profile_done { 1 } else { 0 };
+                let idea_done = has_idea.get();
+                let stoke_done = has_stoke.get();
+                let people_done = has_visited_people.get();
+
+                let steps_done = [profile_done, idea_done, stoke_done, people_done]
+                    .iter()
+                    .filter(|&&v| v)
+                    .count();
                 let total_steps = 4;
                 let progress_pct = (steps_done as f32 / total_steps as f32 * 100.0) as u32;
 
@@ -55,16 +90,16 @@ pub fn OnboardingChecklist() -> impl IntoView {
                                 <span class="step-check">{if profile_done { "\u{2705}" } else { "\u{2B1C}" }}</span>
                                 <A href="/settings" attr:class="step-link">"Complete your profile"</A>
                             </li>
-                            <li>
-                                <span class="step-check">{"\u{2B1C}"}</span>
+                            <li class=if idea_done { "step-done" } else { "" }>
+                                <span class="step-check">{if idea_done { "\u{2705}" } else { "\u{2B1C}" }}</span>
                                 <A href="/ideas/new" attr:class="step-link">"Create your first idea"</A>
                             </li>
-                            <li>
-                                <span class="step-check">{"\u{2B1C}"}</span>
+                            <li class=if stoke_done { "step-done" } else { "" }>
+                                <span class="step-check">{if stoke_done { "\u{2705}" } else { "\u{2B1C}" }}</span>
                                 <A href="/browse" attr:class="step-link">"Stoke an idea you like"</A>
                             </li>
-                            <li>
-                                <span class="step-check">{"\u{2B1C}"}</span>
+                            <li class=if people_done { "step-done" } else { "" }>
+                                <span class="step-check">{if people_done { "\u{2705}" } else { "\u{2B1C}" }}</span>
                                 <A href="/people" attr:class="step-link">"Discover collaborators"</A>
                             </li>
                         </ul>
@@ -88,4 +123,11 @@ fn set_dismissed() {
     {
         let _ = storage.set_item("ideaforge_onboarding_dismissed", "true");
     }
+}
+
+fn check_visited_people() -> bool {
+    web_sys::window()
+        .and_then(|w| w.local_storage().ok().flatten())
+        .and_then(|s| s.get_item("ideaforge_visited_people").ok().flatten())
+        .map_or(false, |v| v == "true")
 }

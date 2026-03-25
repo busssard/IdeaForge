@@ -7,6 +7,11 @@ use crate::components::loading::Loading;
 
 #[component]
 pub fn PeoplePage() -> impl IntoView {
+    // Mark that the user has visited the people page (for onboarding checklist)
+    if let Some(storage) = web_sys::window().and_then(|w| w.local_storage().ok().flatten()) {
+        let _ = storage.set_item("ideaforge_visited_people", "true");
+    }
+
     let role_filter = RwSignal::new(String::new());
     let sort_filter = RwSignal::new("recently_joined".to_string());
     let page = RwSignal::new(1u64);

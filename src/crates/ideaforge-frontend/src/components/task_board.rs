@@ -5,11 +5,23 @@ use crate::api;
 use crate::api::types::{BoardColumns, CreateTaskRequest, TaskResponse};
 use crate::state::auth::AuthState;
 
+fn format_budget(cents: i64, currency: &str) -> String {
+    if cents == 0 {
+        return String::new();
+    }
+    if currency == "ADA" {
+        format!("{} ADA", cents as f64 / 1_000_000.0)
+    } else {
+        format!("${:.2}", cents as f64 / 100.0)
+    }
+}
+
 #[component]
 pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
     let auth = expect_context::<AuthState>();
 
     let columns = RwSignal::new(Option::<BoardColumns>::None);
+    let total_budget = RwSignal::new(0i64);
     let loading = RwSignal::new(true);
     let error_msg = RwSignal::new(String::new());
     let show_form = RwSignal::new(false);
@@ -21,6 +33,8 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
     let title_ref = NodeRef::<leptos::html::Input>::new();
     let desc_ref = NodeRef::<leptos::html::Textarea>::new();
     let priority_ref = NodeRef::<leptos::html::Select>::new();
+    let budget_ref = NodeRef::<leptos::html::Input>::new();
+    let currency_ref = NodeRef::<leptos::html::Select>::new();
 
     // Fetch board data
     let fetch_board = move || {
@@ -29,7 +43,10 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
         error_msg.set(String::new());
         wasm_bindgen_futures::spawn_local(async move {
             match api::board::get_board(&idea_id).await {
-                Ok(board) => columns.set(Some(board.columns)),
+                Ok(board) => {
+                    total_budget.set(board.total_budget_cents);
+                    columns.set(Some(board.columns));
+                }
                 Err(e) => {
                     // 404 is fine — no tasks yet
                     if e.status == 404 {
@@ -39,6 +56,7 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
                             in_review: vec![],
                             done: vec![],
                         }));
+                        total_budget.set(0);
                     } else {
                         error_msg.set(e.message);
                     }
@@ -93,6 +111,37 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
             })
             .unwrap_or(None);
 
+        // Parse budget: input is in dollars (or ADA), convert to cents (or lovelace)
+        let budget_str = budget_ref
+            .get()
+            .map(|el| {
+                let el: &web_sys::HtmlInputElement = el.unchecked_ref();
+                el.value()
+            })
+            .unwrap_or_default();
+
+        let currency_val = currency_ref
+            .get()
+            .map(|el| {
+                let el: &web_sys::HtmlSelectElement = el.unchecked_ref();
+                el.value()
+            })
+            .unwrap_or_else(|| "USD".to_string());
+
+        let (budget_cents, currency) = if budget_str.trim().is_empty() {
+            (None, None)
+        } else if let Ok(amount) = budget_str.trim().parse::<f64>() {
+            if amount <= 0.0 {
+                (None, None)
+            } else if currency_val == "ADA" {
+                (Some((amount * 1_000_000.0) as i64), Some("ADA".to_string()))
+            } else {
+                (Some((amount * 100.0) as i64), Some("USD".to_string()))
+            }
+        } else {
+            (None, None)
+        };
+
         creating.set(true);
         let idea_id = idea_id_stored.get_value();
 
@@ -103,6 +152,8 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
             assignee_id: None,
             skill_tags: None,
             due_date: None,
+            budget_cents,
+            currency,
         };
 
         wasm_bindgen_futures::spawn_local(async move {
@@ -118,7 +169,10 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
             // Re-fetch board
             let idea_id = idea_id_stored.get_value();
             match api::board::get_board(&idea_id).await {
-                Ok(board) => columns.set(Some(board.columns)),
+                Ok(board) => {
+                    total_budget.set(board.total_budget_cents);
+                    columns.set(Some(board.columns));
+                }
                 Err(_) => {}
             }
         });
@@ -135,7 +189,10 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
                 let _ = api::board::update_task_status(&idea_id, &task_id, new_status).await;
                 // Re-fetch board
                 match api::board::get_board(&idea_id).await {
-                    Ok(board) => columns.set(Some(board.columns)),
+                    Ok(board) => {
+                        total_budget.set(board.total_budget_cents);
+                        columns.set(Some(board.columns));
+                    }
                     Err(_) => {}
                 }
             });
@@ -152,7 +209,10 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
                 let _ = api::board::delete_task(&idea_id, &task_id).await;
                 // Re-fetch board
                 match api::board::get_board(&idea_id).await {
-                    Ok(board) => columns.set(Some(board.columns)),
+                    Ok(board) => {
+                        total_budget.set(board.total_budget_cents);
+                        columns.set(Some(board.columns));
+                    }
                     Err(_) => {}
                 }
             });
@@ -169,6 +229,7 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
         let tags = task.skill_tags.clone();
         let task_id = task.id.clone();
         let task_id_del = task.id.clone();
+        let budget_display = format_budget(task.budget_cents, &task.currency);
 
         // Build action buttons based on column
         let actions = match status {
@@ -232,6 +293,10 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
                         view! { <p class="task-desc">{d}</p> }.into_any()
                     })
                     .unwrap_or_else(|| view! {}.into_any())}
+                {(!budget_display.is_empty())
+                    .then(|| {
+                        view! { <span class="task-budget">{budget_display}</span> }
+                    })}
                 <div class="task-card-footer">
                     {due
                         .map(|d| {
@@ -258,7 +323,24 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
     view! {
         <div class="task-board">
             <div class="task-board-header">
-                <h3>"Project Board"</h3>
+                <div>
+                    <h3>"Project Board"</h3>
+                    {move || {
+                        let budget = total_budget.get();
+                        if budget > 0 {
+                            // Default to USD display for total
+                            let display = format!("${:.2}", budget as f64 / 100.0);
+                            view! {
+                                <span class="board-total-budget">
+                                    "Total Budget: " {display}
+                                </span>
+                            }
+                                .into_any()
+                        } else {
+                            view! {}.into_any()
+                        }
+                    }}
+                </div>
                 {move || {
                     if auth.is_authenticated() {
                         view! {
@@ -307,6 +389,19 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
                             <option value="high">"High"</option>
                             <option value="urgent">"Urgent"</option>
                         </select>
+                        <div class="task-budget-input-group">
+                            <input
+                                node_ref=budget_ref
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="Budget (optional)"
+                            />
+                            <select node_ref=currency_ref>
+                                <option value="USD">"USD ($)"</option>
+                                <option value="ADA">"ADA"</option>
+                            </select>
+                        </div>
                         <button
                             class="btn btn-primary btn-sm"
                             type="submit"

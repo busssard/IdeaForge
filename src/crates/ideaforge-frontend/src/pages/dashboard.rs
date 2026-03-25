@@ -41,6 +41,21 @@ fn DashboardContent() -> impl IntoView {
         api::ideas::list_my_stoked_ideas(1, 20).await
     });
 
+    // Derive counts from loaded data
+    let my_ideas_count = Signal::derive(move || {
+        my_ideas
+            .get()
+            .and_then(|r| r.as_ref().ok().map(|resp| resp.meta.total))
+            .unwrap_or(0)
+    });
+
+    let my_stokes_count = Signal::derive(move || {
+        my_stokes
+            .get()
+            .and_then(|r| r.as_ref().ok().map(|resp| resp.meta.total))
+            .unwrap_or(0)
+    });
+
     view! {
         <div class="page dashboard">
             <div class="page-header">
@@ -52,11 +67,15 @@ fn DashboardContent() -> impl IntoView {
                 <button
                     class=move || if active_tab.get() == "ideas" { "tab active" } else { "tab" }
                     on:click=move |_| active_tab.set("ideas".into())
-                >"My Ideas"</button>
+                >
+                    {move || format!("My Ideas ({})", my_ideas_count.get())}
+                </button>
                 <button
                     class=move || if active_tab.get() == "stokes" { "tab active" } else { "tab" }
                     on:click=move |_| active_tab.set("stokes".into())
-                >"My Stokes"</button>
+                >
+                    {move || format!("My Stokes ({})", my_stokes_count.get())}
+                </button>
             </div>
 
             // My Ideas tab
@@ -64,6 +83,7 @@ fn DashboardContent() -> impl IntoView {
                 class="dashboard-section"
                 style=move || if active_tab.get() == "ideas" { "" } else { "display:none" }
             >
+                <p class="dashboard-section-desc">"Ideas you\u{2019}ve brought to the Forge"</p>
                 <Suspense fallback=move || view! { <Loading /> }>
                     {move || {
                         my_ideas.get().map(|result| {
@@ -106,6 +126,7 @@ fn DashboardContent() -> impl IntoView {
                 class="dashboard-section"
                 style=move || if active_tab.get() == "stokes" { "" } else { "display:none" }
             >
+                <p class="dashboard-section-desc">"Ideas you\u{2019}ve supported with your fire"</p>
                 <Suspense fallback=move || view! { <Loading /> }>
                     {move || {
                         my_stokes.get().map(|result| {

@@ -367,6 +367,10 @@ pub struct TaskResponse {
     pub skill_tags: Vec<String>,
     pub due_date: Option<String>,
     pub position: i32,
+    #[serde(default)]
+    pub budget_cents: i64,
+    #[serde(default)]
+    pub currency: String,
     pub created_at: String,
     pub updated_at: String,
     pub completed_at: Option<String>,
@@ -377,6 +381,8 @@ pub struct BoardResponse {
     pub idea_id: String,
     pub columns: BoardColumns,
     pub total_tasks: u64,
+    #[serde(default)]
+    pub total_budget_cents: i64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -400,6 +406,10 @@ pub struct CreateTaskRequest {
     pub skill_tags: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub due_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub budget_cents: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -19,8 +19,8 @@ pub fn Navbar() -> impl IntoView {
         <nav class="navbar">
             <div class="navbar-inner">
                 <A href="/" attr:class="navbar-brand">
-                    <img src="/static/logo.svg" alt="IdeaForge" />
-                    "IdeaForge"
+                    <img src="/static/logo.svg" alt="" width="32" height="32" />
+                    <span class="navbar-brand-text">"IdeaForge"</span>
                 </A>
 
                 <div class="navbar-links">

@@ -183,6 +183,14 @@ h4 { font-size: 1.25rem; }
 .navbar-brand img {
     height: 32px;
     width: 32px;
+    flex-shrink: 0;
+    display: block;
+}
+
+.navbar-brand-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .navbar-links {
@@ -2087,4 +2095,138 @@ h4 { font-size: 1.25rem; }
 .btn-xs {
     font-size: 0.75rem;
     padding: 2px 6px;
+}
+
+/* --- Task Budget --- */
+.task-budget {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--forge-orange);
+}
+
+.board-total-budget {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: block;
+    margin-top: var(--space-xs);
+}
+
+.task-budget-input-group {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.task-budget-input-group input {
+    flex: 1;
+}
+
+.task-budget-input-group select {
+    width: 100px;
+}
+
+/* --- Dashboard Tabs --- */
+.dashboard-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border-default);
+    margin-bottom: var(--space-lg);
+}
+
+.tab {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    font-family: var(--font-body);
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-card);
+}
+
+.tab.active {
+    color: var(--forge-orange);
+    border-bottom-color: var(--forge-orange);
+    font-weight: 600;
+}
+
+.dashboard-section-desc {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: var(--space-lg);
+}
+
+/* --- Comment Section --- */
+.comment-section h3 {
+    margin-bottom: var(--space-md);
+}
+
+.comment-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.comment-item {
+    padding: var(--space-md);
+}
+
+.comment-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xs);
+    font-size: 0.85rem;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.comment-author:hover {
+    color: var(--forge-orange);
+}
+
+.comment-date {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.comment-body {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+.comment-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+/* --- Idea Edit Form --- */
+.idea-edit-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.idea-edit-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    font-family: var(--font-heading);
+}
+
+.idea-edit-actions {
+    display: flex;
+    gap: var(--space-sm);
 }
