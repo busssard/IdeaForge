@@ -11,5 +11,8 @@ pub mod invite_link;
 pub mod flag;
 pub mod bot_endorsement;
 pub mod notification;
+pub mod board_task;
+pub mod nda_template;
+pub mod nda_signature;
 
 pub use enums::*;

@@ -127,6 +127,7 @@ impl<'a> TeamMemberRepository<'a> {
             idea_id: Set(idea_id),
             user_id: Set(user_id),
             role: Set(role),
+            role_label: Set(None),
             joined_at: Set(chrono::Utc::now().fixed_offset()),
         };
         model.insert(self.db).await
@@ -169,5 +170,45 @@ impl<'a> TeamMemberRepository<'a> {
             .filter(team_member::Column::IdeaId.eq(idea_id))
             .count(self.db)
             .await
+    }
+
+    /// Update the custom role label for a team member.
+    pub async fn update_role_label(
+        &self,
+        idea_id: Uuid,
+        user_id: Uuid,
+        role_label: Option<&str>,
+    ) -> Result<team_member::Model, DbErr> {
+        let model = team_member::Entity::find()
+            .filter(team_member::Column::IdeaId.eq(idea_id))
+            .filter(team_member::Column::UserId.eq(user_id))
+            .one(self.db)
+            .await?
+            .ok_or(DbErr::RecordNotFound("Team member not found".to_string()))?;
+
+        let mut active: team_member::ActiveModel = model.into();
+        active.role_label = Set(role_label.map(|s| s.to_string()));
+        active.update(self.db).await
+    }
+
+    /// Update both the permission role and custom label for a team member.
+    pub async fn update_role(
+        &self,
+        idea_id: Uuid,
+        user_id: Uuid,
+        role: TeamMemberRole,
+        role_label: Option<&str>,
+    ) -> Result<team_member::Model, DbErr> {
+        let model = team_member::Entity::find()
+            .filter(team_member::Column::IdeaId.eq(idea_id))
+            .filter(team_member::Column::UserId.eq(user_id))
+            .one(self.db)
+            .await?
+            .ok_or(DbErr::RecordNotFound("Team member not found".to_string()))?;
+
+        let mut active: team_member::ActiveModel = model.into();
+        active.role = Set(role);
+        active.role_label = Set(role_label.map(|s| s.to_string()));
+        active.update(self.db).await
     }
 }

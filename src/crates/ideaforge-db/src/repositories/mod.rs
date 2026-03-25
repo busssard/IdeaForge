@@ -9,3 +9,5 @@ pub mod invite_link_repo;
 pub mod bot_endorsement_repo;
 pub mod flag_repo;
 pub mod notification_repo;
+pub mod nda_repo;
+pub mod board_task_repo;

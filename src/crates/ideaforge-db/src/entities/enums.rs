@@ -110,6 +110,8 @@ pub enum IdeaOpenness {
     Commercial,
     #[sea_orm(string_value = "private")]
     Private,
+    #[sea_orm(string_value = "nda_protected")]
+    NdaProtected,
 }
 
 impl Default for IdeaOpenness {
@@ -125,6 +127,7 @@ impl std::fmt::Display for IdeaOpenness {
             Self::Collaborative => write!(f, "collaborative"),
             Self::Commercial => write!(f, "commercial"),
             Self::Private => write!(f, "private"),
+            Self::NdaProtected => write!(f, "nda_protected"),
         }
     }
 }
@@ -136,13 +139,14 @@ impl IdeaOpenness {
             "collaborative" => Some(Self::Collaborative),
             "commercial" => Some(Self::Commercial),
             "private" => Some(Self::Private),
+            "nda_protected" => Some(Self::NdaProtected),
             _ => None,
         }
     }
 
     /// Whether this idea should appear in public browse/search results.
     pub fn is_publicly_listed(&self) -> bool {
-        matches!(self, Self::Open | Self::Collaborative | Self::Commercial)
+        matches!(self, Self::Open | Self::Collaborative | Self::Commercial | Self::NdaProtected)
     }
 }
 
@@ -375,6 +379,8 @@ pub enum NotificationKind {
     BotAnalysis,
     #[sea_orm(string_value = "mention")]
     Mention,
+    #[sea_orm(string_value = "nda_signed")]
+    NdaSigned,
 }
 
 impl std::fmt::Display for NotificationKind {
@@ -389,6 +395,7 @@ impl std::fmt::Display for NotificationKind {
             Self::Milestone => write!(f, "milestone"),
             Self::BotAnalysis => write!(f, "bot_analysis"),
             Self::Mention => write!(f, "mention"),
+            Self::NdaSigned => write!(f, "nda_signed"),
         }
     }
 }
@@ -405,6 +412,93 @@ impl NotificationKind {
             "milestone" => Some(Self::Milestone),
             "bot_analysis" => Some(Self::BotAnalysis),
             "mention" => Some(Self::Mention),
+            "nda_signed" => Some(Self::NdaSigned),
+            _ => None,
+        }
+    }
+}
+
+/// PostgreSQL enum: task_status
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "task_status")]
+pub enum TaskStatus {
+    #[sea_orm(string_value = "open")]
+    Open,
+    #[sea_orm(string_value = "assigned")]
+    Assigned,
+    #[sea_orm(string_value = "in_review")]
+    InReview,
+    #[sea_orm(string_value = "done")]
+    Done,
+}
+
+impl Default for TaskStatus {
+    fn default() -> Self {
+        Self::Open
+    }
+}
+
+impl std::fmt::Display for TaskStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Open => write!(f, "open"),
+            Self::Assigned => write!(f, "assigned"),
+            Self::InReview => write!(f, "in_review"),
+            Self::Done => write!(f, "done"),
+        }
+    }
+}
+
+impl TaskStatus {
+    pub fn from_str_opt(s: &str) -> Option<Self> {
+        match s {
+            "open" => Some(Self::Open),
+            "assigned" => Some(Self::Assigned),
+            "in_review" => Some(Self::InReview),
+            "done" => Some(Self::Done),
+            _ => None,
+        }
+    }
+}
+
+/// PostgreSQL enum: task_priority
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "task_priority")]
+pub enum TaskPriority {
+    #[sea_orm(string_value = "low")]
+    Low,
+    #[sea_orm(string_value = "normal")]
+    Normal,
+    #[sea_orm(string_value = "high")]
+    High,
+    #[sea_orm(string_value = "urgent")]
+    Urgent,
+}
+
+impl Default for TaskPriority {
+    fn default() -> Self {
+        Self::Normal
+    }
+}
+
+impl std::fmt::Display for TaskPriority {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Low => write!(f, "low"),
+            Self::Normal => write!(f, "normal"),
+            Self::High => write!(f, "high"),
+            Self::Urgent => write!(f, "urgent"),
+        }
+    }
+}
+
+impl TaskPriority {
+    pub fn from_str_opt(s: &str) -> Option<Self> {
+        match s {
+            "low" => Some(Self::Low),
+            "normal" => Some(Self::Normal),
+            "high" => Some(Self::High),
+            "urgent" => Some(Self::Urgent),
             _ => None,
         }
     }

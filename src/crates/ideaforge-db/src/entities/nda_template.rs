@@ -1,18 +1,21 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use super::enums::TeamMemberRole;
-
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "team_members")]
+#[sea_orm(table_name = "nda_templates")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
+    #[sea_orm(unique)]
     pub idea_id: Uuid,
-    pub user_id: Uuid,
-    pub role: TeamMemberRole,
-    pub role_label: Option<String>,
-    pub joined_at: DateTimeWithTimeZone,
+    pub title: String,
+    #[sea_orm(column_type = "Text")]
+    pub body: String,
+    pub confidentiality_period_days: i32,
+    pub jurisdiction: Option<String>,
+    pub created_by: Uuid,
+    pub created_at: DateTimeWithTimeZone,
+    pub updated_at: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -25,10 +28,12 @@ pub enum Relation {
     Idea,
     #[sea_orm(
         belongs_to = "super::user::Entity",
-        from = "Column::UserId",
+        from = "Column::CreatedBy",
         to = "super::user::Column::Id"
     )]
-    User,
+    Creator,
+    #[sea_orm(has_many = "super::nda_signature::Entity")]
+    Signatures,
 }
 
 impl Related<super::idea::Entity> for Entity {
@@ -39,7 +44,13 @@ impl Related<super::idea::Entity> for Entity {
 
 impl Related<super::user::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::User.def()
+        Relation::Creator.def()
+    }
+}
+
+impl Related<super::nda_signature::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Signatures.def()
     }
 }
 
