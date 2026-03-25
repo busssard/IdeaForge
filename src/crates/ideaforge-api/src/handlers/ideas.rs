@@ -69,6 +69,8 @@ pub struct UpdateIdeaRequest {
 pub struct IdeaResponse {
     pub id: Uuid,
     pub author_id: Uuid,
+    pub author_name: String,
+    pub author_avatar_url: Option<String>,
     pub title: String,
     pub summary: String,
     pub description: String,
@@ -159,10 +161,14 @@ fn idea_response(
     has_stoked: bool,
     nda_required: bool,
     nda_signed: bool,
+    author_name: &str,
+    author_avatar_url: Option<&str>,
 ) -> IdeaResponse {
     IdeaResponse {
         id: m.id,
         author_id: m.author_id,
+        author_name: author_name.to_string(),
+        author_avatar_url: author_avatar_url.map(|s| s.to_string()),
         title: m.title.clone(),
         summary: m.summary.clone(),
         description: m.description.clone(),
@@ -175,6 +181,32 @@ fn idea_response(
         nda_signed,
         created_at: m.created_at.to_rfc3339(),
         updated_at: m.updated_at.to_rfc3339(),
+    }
+}
+
+/// Batch-fetch author display names and avatars for a set of ideas.
+async fn fetch_author_map(
+    db: &sea_orm::DatabaseConnection,
+    ideas: &[ideaforge_db::entities::idea::Model],
+) -> std::collections::HashMap<Uuid, (String, Option<String>)> {
+    use ideaforge_db::entities::user;
+    let author_ids: Vec<Uuid> = ideas.iter().map(|i| i.author_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
+    if author_ids.is_empty() {
+        return std::collections::HashMap::new();
+    }
+    match user::Entity::find()
+        .filter(user::Column::Id.is_in(author_ids))
+        .all(db)
+        .await
+    {
+        Ok(users) => users
+            .into_iter()
+            .map(|u| (u.id, (u.display_name, u.avatar_url)))
+            .collect(),
+        Err(e) => {
+            tracing::warn!("Failed to fetch author names: {e}");
+            std::collections::HashMap::new()
+        }
     }
 }
 
@@ -283,6 +315,9 @@ async fn list_ideas(
 
             let current_user_id = opt_auth.0.as_ref().map(|a| a.user_id);
 
+            // Batch-fetch author names/avatars
+            let author_map = fetch_author_map(state.db.connection(), &ideas).await;
+
             let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
             Json(IdeaListResponse {
                 data: ideas
@@ -291,11 +326,17 @@ async fn list_ideas(
                         let is_nda = i.openness == IdeaOpenness::NdaProtected;
                         let is_author = current_user_id == Some(i.author_id);
                         let nda_signed = nda_signed_set.contains(&i.id);
+                        let (author_name, author_avatar) = author_map
+                            .get(&i.author_id)
+                            .map(|(n, a)| (n.as_str(), a.as_deref()))
+                            .unwrap_or(("Unknown", None));
                         let mut resp = idea_response(
                             i,
                             stoked_set.contains(&i.id),
                             is_nda,
                             nda_signed,
+                            author_name,
+                            author_avatar,
                         );
                         // Redact description for NDA ideas unless author or signed
                         if is_nda && !is_author && !nda_signed {
@@ -435,7 +476,16 @@ async fn create_idea(
     {
         Ok(idea) => {
             let is_nda = idea.openness == IdeaOpenness::NdaProtected;
-            (StatusCode::CREATED, Json(idea_response(&idea, false, is_nda, false))).into_response()
+            // Fetch author info for the response
+            use ideaforge_db::entities::user;
+            let author = user::Entity::find_by_id(idea.author_id)
+                .one(state.db.connection())
+                .await
+                .ok()
+                .flatten();
+            let author_name = author.as_ref().map_or("Unknown", |u| &u.display_name);
+            let author_avatar = author.as_ref().and_then(|u| u.avatar_url.as_deref());
+            (StatusCode::CREATED, Json(idea_response(&idea, false, is_nda, false, author_name, author_avatar))).into_response()
         }
         Err(e) => {
             tracing::error!("Failed to create idea: {e}");
@@ -509,6 +559,16 @@ async fn get_idea(
                 false
             };
 
+            // Fetch author info once for the response
+            use ideaforge_db::entities::user;
+            let author = user::Entity::find_by_id(idea.author_id)
+                .one(state.db.connection())
+                .await
+                .ok()
+                .flatten();
+            let author_name = author.as_ref().map_or("Unknown", |u| &u.display_name);
+            let author_avatar = author.as_ref().and_then(|u| u.avatar_url.as_deref());
+
             let is_nda = idea.openness == IdeaOpenness::NdaProtected;
             let mut nda_signed = false;
 
@@ -539,7 +599,7 @@ async fn get_idea(
                             .unwrap_or(false);
                     }
                     if !nda_signed {
-                        let mut resp = idea_response(&idea, has_stoked, true, false);
+                        let mut resp = idea_response(&idea, has_stoked, true, false, author_name, author_avatar);
                         resp.description = NDA_REDACTION_MESSAGE.to_string();
                         return Json(resp).into_response();
                     }
@@ -554,13 +614,13 @@ async fn get_idea(
             if idea.openness == IdeaOpenness::Commercial {
                 let is_authenticated = opt_auth.0.is_some();
                 if !is_authenticated {
-                    let mut resp = idea_response(&idea, has_stoked, is_nda, nda_signed);
+                    let mut resp = idea_response(&idea, has_stoked, is_nda, nda_signed, author_name, author_avatar);
                     resp.description = COMMERCIAL_REDACTION_MESSAGE.to_string();
                     return Json(resp).into_response();
                 }
             }
 
-            Json(idea_response(&idea, has_stoked, is_nda, nda_signed)).into_response()
+            Json(idea_response(&idea, has_stoked, is_nda, nda_signed, author_name, author_avatar)).into_response()
         }
         Ok(None) => err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response(),
         Err(e) => {
@@ -652,7 +712,16 @@ async fn update_idea(
     {
         Ok(idea) => {
             let is_nda = idea.openness == IdeaOpenness::NdaProtected;
-            Json(idea_response(&idea, false, is_nda, is_nda)).into_response()
+            // Fetch author info for the response
+            use ideaforge_db::entities::user;
+            let author = user::Entity::find_by_id(idea.author_id)
+                .one(state.db.connection())
+                .await
+                .ok()
+                .flatten();
+            let author_name = author.as_ref().map_or("Unknown", |u| &u.display_name);
+            let author_avatar = author.as_ref().and_then(|u| u.avatar_url.as_deref());
+            Json(idea_response(&idea, false, is_nda, is_nda, author_name, author_avatar)).into_response()
         }
         Err(e) => {
             tracing::error!("Failed to update idea: {e}");
@@ -1115,6 +1184,9 @@ async fn list_my_stoked_ideas(
         std::collections::HashSet::new()
     };
 
+    // Batch-fetch author names/avatars
+    let author_map = fetch_author_map(state.db.connection(), &ideas).await;
+
     let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
     Json(IdeaListResponse {
         data: ideas
@@ -1123,7 +1195,11 @@ async fn list_my_stoked_ideas(
                 let is_nda = i.openness == IdeaOpenness::NdaProtected;
                 let is_author = i.author_id == auth.user_id;
                 let nda_signed = nda_signed_set.contains(&i.id);
-                let mut resp = idea_response(i, true, is_nda, nda_signed || is_author);
+                let (author_name, author_avatar) = author_map
+                    .get(&i.author_id)
+                    .map(|(n, a)| (n.as_str(), a.as_deref()))
+                    .unwrap_or(("Unknown", None));
+                let mut resp = idea_response(i, true, is_nda, nda_signed || is_author, author_name, author_avatar);
                 if is_nda && !is_author && !nda_signed {
                     resp.description = NDA_REDACTION_MESSAGE.to_string();
                 }

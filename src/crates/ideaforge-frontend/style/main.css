@@ -411,6 +411,21 @@ h4 { font-size: 1.25rem; }
     color: var(--text-muted);
 }
 
+.idea-card-author {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.idea-card-own {
+    border-left: 3px solid var(--forge-orange);
+}
+
+.idea-card-own .idea-card-author::after {
+    content: " \00B7  Your idea";
+    color: var(--forge-orange);
+    font-weight: 600;
+}
+
 .idea-card-tags {
     display: flex;
     gap: var(--space-sm);

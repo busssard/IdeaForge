@@ -48,6 +48,7 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                 .next()
                                 .unwrap_or("")
                                 .to_string();
+                            let author_name = idea.author_name.clone().unwrap_or_else(|| "Unknown".to_string());
                             let author_id = idea.author_id.clone();
                             let idea_id = idea.id.clone();
                             let idea_id_nda = idea.id.clone();
@@ -163,7 +164,7 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                                 "by "
                                                 <A href=format!(
                                                     "/profile/{author_id}",
-                                                )>"view author"</A>
+                                                )>{author_name}</A>
                                             </span>
                                             <span>"Created " {created_date}</span>
                                             <span>"Updated " {updated_date}</span>

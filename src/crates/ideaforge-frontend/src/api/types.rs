@@ -36,6 +36,10 @@ pub struct RefreshRequest {
 pub struct IdeaResponse {
     pub id: String,
     pub author_id: String,
+    #[serde(default)]
+    pub author_name: Option<String>,
+    #[serde(default)]
+    pub author_avatar_url: Option<String>,
     pub title: String,
     pub summary: String,
     pub description: String,
