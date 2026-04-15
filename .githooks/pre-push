@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# pre-push hook — runs cargo check + cargo test before allowing a push.
+# pre-push hook — runs fmt, clippy, check, test before allowing a push.
 # Enable with: git config core.hooksPath .githooks  (or scripts/install-hooks.sh)
 # Skip for an emergency push with: git push --no-verify
+#
+# Output policy: ALL steps stay quiet on success. On failure, print only the
+# lines the dev team needs: file:line, error/panic, failing test names.
+# Full logs for every step live in /tmp/ideaforge-pre-push-*.log.
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT/src"
 
-# Colours (skip if not a tty)
 if [[ -t 1 ]]; then
     BOLD=$'\e[1m'; DIM=$'\e[2m'; GREEN=$'\e[32m'; RED=$'\e[31m'
     CYAN=$'\e[36m'; YELLOW=$'\e[33m'; RESET=$'\e[0m'
@@ -18,104 +21,136 @@ fi
 START_TS=$(date +%s)
 STEP=0
 TOTAL=4
+LOG_DIR="/tmp"
 
 banner() {
     STEP=$((STEP + 1))
-    echo
-    echo "${CYAN}${BOLD}[pre-push ${STEP}/${TOTAL}]${RESET} ${BOLD}$1${RESET}"
-    echo "${DIM}$ $2${RESET}"
+    printf "%b[pre-push %d/%d]%b %s " "${CYAN}${BOLD}" "$STEP" "$TOTAL" "$RESET" "$1"
 }
+
+ok() { printf "%bok%b\n" "$GREEN" "$RESET"; }
+bad() { printf "%b%sFAILED%b\n" "$RED" "$BOLD" "$RESET"; }
 
 fail() {
     local elapsed=$(( $(date +%s) - START_TS ))
     echo
     echo "${RED}${BOLD}✗ pre-push failed${RESET} after ${elapsed}s at step ${STEP}/${TOTAL}"
-    echo "${DIM}  fix the failure above, or bypass with: git push --no-verify${RESET}"
+    echo "${DIM}  bypass (not recommended): git push --no-verify${RESET}"
     exit 1
 }
 trap fail ERR
 
-echo "${BOLD}Running pre-push checks${RESET} ${DIM}(repo: $(basename "$REPO_ROOT"), branch: $(git rev-parse --abbrev-ref HEAD))${RESET}"
-echo "${DIM}workspace root: $PWD${RESET}"
+echo "${BOLD}pre-push checks${RESET} ${DIM}($(basename "$REPO_ROOT") @ $(git rev-parse --abbrev-ref HEAD))${RESET}"
 
-# 1. Format
-banner "rustfmt — formatting check" "cargo fmt --all -- --check"
-if ! cargo fmt --all -- --check; then
-    echo "${YELLOW}  hint: run 'cargo fmt --all' to fix${RESET}"
+# --- 1. rustfmt -----------------------------------------------------------
+banner "rustfmt"
+FMT_LOG="$LOG_DIR/ideaforge-pre-push-fmt.log"
+if cargo fmt --all -- --check > "$FMT_LOG" 2>&1; then
+    ok
+else
+    bad
+    echo "${DIM}  full log: $FMT_LOG${RESET}"
+    echo "${BOLD}${RED}Files needing formatting:${RESET}"
+    grep -E '^Diff in ' "$FMT_LOG" | sed -E 's|^Diff in (.*) at line ([0-9]+):|  • \1:\2|' | sort -u | head -40
+    echo
+    echo "${YELLOW}  fix: cargo fmt --all${RESET}"
     false
 fi
-echo "${GREEN}  ok${RESET}"
 
-# 2. Clippy (warnings-as-errors). Skip if clippy isn't installed.
-if cargo clippy --version >/dev/null 2>&1; then
-    banner "clippy — lint check" "cargo clippy --workspace --all-targets -- -D warnings"
-    cargo clippy --workspace --all-targets --quiet -- -D warnings
-    echo "${GREEN}  ok${RESET}"
+# --- 2. clippy ------------------------------------------------------------
+banner "clippy"
+CLIPPY_LOG="$LOG_DIR/ideaforge-pre-push-clippy.log"
+if ! cargo clippy --version >/dev/null 2>&1; then
+    printf "%bskipped (not installed)%b\n" "$YELLOW" "$RESET"
 else
-    STEP=$((STEP + 1))
-    echo
-    echo "${YELLOW}[pre-push ${STEP}/${TOTAL}] clippy not installed — skipping${RESET}"
+    if CARGO_TERM_COLOR=never cargo clippy --workspace --all-targets --quiet \
+            -- -D warnings > "$CLIPPY_LOG" 2>&1; then
+        ok
+    else
+        bad
+        echo "${DIM}  full log: $CLIPPY_LOG${RESET}"
+        echo "${BOLD}${RED}Clippy issues:${RESET}"
+        # Pair each `error:` / `warning:` line with the following ` --> file:line:col`.
+        awk '
+            /^(error|warning)(\[[^]]+\])?: / { msg = $0; next }
+            /^[[:space:]]*--> / && msg != "" {
+                sub(/^[[:space:]]*--> /, "", $0)
+                printf "  • %s\n    %s\n", $0, msg
+                msg = ""
+            }
+        ' "$CLIPPY_LOG" | head -80
+        echo
+        echo "${YELLOW}  fix the issues above, or narrow with: cargo clippy --workspace${RESET}"
+        false
+    fi
 fi
 
-# 3. Type check
-banner "cargo check — type check across workspace" "cargo check --workspace --all-targets"
-cargo check --workspace --all-targets --quiet
-echo "${GREEN}  ok${RESET}"
+# --- 3. cargo check -------------------------------------------------------
+banner "cargo check"
+CHECK_LOG="$LOG_DIR/ideaforge-pre-push-check.log"
+if CARGO_TERM_COLOR=never cargo check --workspace --all-targets --quiet \
+        > "$CHECK_LOG" 2>&1; then
+    ok
+else
+    bad
+    echo "${DIM}  full log: $CHECK_LOG${RESET}"
+    echo "${BOLD}${RED}Compile errors:${RESET}"
+    awk '
+        /^error(\[[^]]+\])?: / { msg = $0; next }
+        /^[[:space:]]*--> / && msg != "" {
+            sub(/^[[:space:]]*--> /, "", $0)
+            printf "  • %s\n    %s\n", $0, msg
+            msg = ""
+        }
+    ' "$CHECK_LOG" | head -80
+    false
+fi
 
-# 4. Test suite
-banner "cargo test — running workspace tests" "cargo test --workspace"
-# Capture full output; on success show only the summary line(s), on failure
-# print only the FAILED test names + their panic messages + file:line info.
-# Full log is always kept at /tmp/ideaforge-pre-push-test.log for debugging.
-TEST_LOG="/tmp/ideaforge-pre-push-test.log"
+# --- 4. cargo test --------------------------------------------------------
+banner "cargo test"
+TEST_LOG="$LOG_DIR/ideaforge-pre-push-test.log"
 TEST_STATUS=0
-# --no-fail-fast → run the whole suite so the dev sees every failure in one go.
-# CARGO_TERM_COLOR=always keeps colour in the log file; we strip it before grep.
-CARGO_TERM_COLOR=never cargo test --workspace --no-fail-fast > "$TEST_LOG" 2>&1 \
-    || TEST_STATUS=$?
+CARGO_TERM_COLOR=never cargo test --workspace --no-fail-fast --quiet \
+    > "$TEST_LOG" 2>&1 || TEST_STATUS=$?
 
 if [[ $TEST_STATUS -eq 0 ]]; then
-    # Success: print the one-line "test result: ok" lines only.
-    grep -E '^test result:' "$TEST_LOG" | sed 's/^/  /' || true
-    echo "${GREEN}  ok${RESET}"
+    # Tally passed/failed across all crates for one-line summary.
+    PASSED=$(awk '/^test result: ok\./ { for (i=1;i<=NF;i++) if ($i=="passed;") s+=$(i-1) } END {print s+0}' "$TEST_LOG")
+    printf "%bok%b ${DIM}(%s tests)%b\n" "$GREEN" "$RESET" "$PASSED" "$RESET"
 else
-    echo "${RED}  ${BOLD}FAILED${RESET}"
+    bad
     echo "${DIM}  full log: $TEST_LOG${RESET}"
-    echo
 
-    # --- Failing test names ---
-    # Lines look like:   test path::to::test_name ... FAILED
+    # Compile errors (tests didn't even build)
+    if grep -qE '^error(\[[^]]+\])?: ' "$TEST_LOG"; then
+        echo "${BOLD}${RED}Compile errors:${RESET}"
+        awk '
+            /^error(\[[^]]+\])?: / { msg = $0; next }
+            /^[[:space:]]*--> / && msg != "" {
+                sub(/^[[:space:]]*--> /, "", $0)
+                printf "  • %s\n    %s\n", $0, msg
+                msg = ""
+            }
+        ' "$TEST_LOG" | head -60
+    fi
+
+    # Failing test names
     FAILED_NAMES=$(grep -E '^test .+ \.\.\. FAILED$' "$TEST_LOG" | awk '{print $2}' | sort -u || true)
     if [[ -n "$FAILED_NAMES" ]]; then
         echo "${BOLD}${RED}Failed tests:${RESET}"
         echo "$FAILED_NAMES" | sed 's/^/  • /'
         echo
+        echo "${BOLD}${RED}Failure details:${RESET}"
+        awk '
+            /^failures:$/ { inblock = 1; next }
+            inblock && /^test result:/ { inblock = 0 }
+            inblock { print }
+        ' "$TEST_LOG" \
+            | grep -E "panicked at|assertion|^Error:|^---- .+ stdout ----" \
+            | sed 's/^/  /' \
+            | head -60
     fi
-
-    # --- Failure details: panic messages with file:line ---
-    # Cargo prints a "failures:" section at the end with each test's stdout
-    # containing the panic line (e.g. `thread 'foo' panicked at src/x.rs:42:5:`).
-    # Extract that block.
-    echo "${BOLD}${RED}Failure details:${RESET}"
-    awk '
-        /^failures:$/ { inblock = 1; next }
-        inblock && /^test result:/ { inblock = 0 }
-        inblock { print }
-    ' "$TEST_LOG" | grep -E "panicked at|assertion|Error:|thread '.+' panicked|^---- .+ stdout ----|^note: " \
-                  | sed 's/^/  /' \
-                  | head -80
-
-    # --- Compile errors (if tests didn't even build) ---
-    if grep -qE '^error(\[E[0-9]+\])?: ' "$TEST_LOG"; then
-        echo
-        echo "${BOLD}${RED}Compile errors:${RESET}"
-        # Each rustc error block: the `error: ...` line + the ` --> file:line:col` line.
-        grep -E '^(error(\[E[0-9]+\])?: |  --> )' "$TEST_LOG" | sed 's/^/  /' | head -60
-    fi
-
-    echo
-    echo "${DIM}  (copy the above when filing a bug; full output in $TEST_LOG)${RESET}"
-    false  # trigger the ERR trap
+    false
 fi
 
 ELAPSED=$(( $(date +%s) - START_TS ))
