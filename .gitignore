@@ -34,3 +34,30 @@ dist/
 
 # Local planning / scratch notes (not committed)
 planning/
+
+# Local-only: never commit any of these (purged from history on 2026-04-16).
+# Keep your working copies under .local/ — it stays on your machine.
+.local/
+.purge-paths.txt
+
+# Claude Code + personal memory
+CLAUDE.md
+.claude/
+memory/
+
+# Private legal / investor documents
+NDA_Revised.docx
+IdeaForge_Investor_Feedback.docx
+
+# Scratch
+scratch_pad.sh
+1..md
+
+# Unfinished deliverables & local dev scripts
+deliverables/
+scripts/
+
+# Session-local workflow files
+tasks.md
+bugs.md
+ideaforge_sketch.md
