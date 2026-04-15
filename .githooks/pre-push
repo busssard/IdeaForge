@@ -64,9 +64,59 @@ echo "${GREEN}  ok${RESET}"
 
 # 4. Test suite
 banner "cargo test — running workspace tests" "cargo test --workspace"
-# Stream test output so the dev sees progress on long suites.
-cargo test --workspace --quiet
-echo "${GREEN}  ok${RESET}"
+# Capture full output; on success show only the summary line(s), on failure
+# print only the FAILED test names + their panic messages + file:line info.
+# Full log is always kept at /tmp/ideaforge-pre-push-test.log for debugging.
+TEST_LOG="/tmp/ideaforge-pre-push-test.log"
+TEST_STATUS=0
+# --no-fail-fast → run the whole suite so the dev sees every failure in one go.
+# CARGO_TERM_COLOR=always keeps colour in the log file; we strip it before grep.
+CARGO_TERM_COLOR=never cargo test --workspace --no-fail-fast > "$TEST_LOG" 2>&1 \
+    || TEST_STATUS=$?
+
+if [[ $TEST_STATUS -eq 0 ]]; then
+    # Success: print the one-line "test result: ok" lines only.
+    grep -E '^test result:' "$TEST_LOG" | sed 's/^/  /' || true
+    echo "${GREEN}  ok${RESET}"
+else
+    echo "${RED}  ${BOLD}FAILED${RESET}"
+    echo "${DIM}  full log: $TEST_LOG${RESET}"
+    echo
+
+    # --- Failing test names ---
+    # Lines look like:   test path::to::test_name ... FAILED
+    FAILED_NAMES=$(grep -E '^test .+ \.\.\. FAILED$' "$TEST_LOG" | awk '{print $2}' | sort -u || true)
+    if [[ -n "$FAILED_NAMES" ]]; then
+        echo "${BOLD}${RED}Failed tests:${RESET}"
+        echo "$FAILED_NAMES" | sed 's/^/  • /'
+        echo
+    fi
+
+    # --- Failure details: panic messages with file:line ---
+    # Cargo prints a "failures:" section at the end with each test's stdout
+    # containing the panic line (e.g. `thread 'foo' panicked at src/x.rs:42:5:`).
+    # Extract that block.
+    echo "${BOLD}${RED}Failure details:${RESET}"
+    awk '
+        /^failures:$/ { inblock = 1; next }
+        inblock && /^test result:/ { inblock = 0 }
+        inblock { print }
+    ' "$TEST_LOG" | grep -E "panicked at|assertion|Error:|thread '.+' panicked|^---- .+ stdout ----|^note: " \
+                  | sed 's/^/  /' \
+                  | head -80
+
+    # --- Compile errors (if tests didn't even build) ---
+    if grep -qE '^error(\[E[0-9]+\])?: ' "$TEST_LOG"; then
+        echo
+        echo "${BOLD}${RED}Compile errors:${RESET}"
+        # Each rustc error block: the `error: ...` line + the ` --> file:line:col` line.
+        grep -E '^(error(\[E[0-9]+\])?: |  --> )' "$TEST_LOG" | sed 's/^/  /' | head -60
+    fi
+
+    echo
+    echo "${DIM}  (copy the above when filing a bug; full output in $TEST_LOG)${RESET}"
+    false  # trigger the ERR trap
+fi
 
 ELAPSED=$(( $(date +%s) - START_TS ))
 echo
