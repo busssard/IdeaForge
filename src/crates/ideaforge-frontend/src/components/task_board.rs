@@ -3,6 +3,7 @@ use wasm_bindgen::JsCast;
 
 use crate::api;
 use crate::api::types::{BoardColumns, CreateTaskRequest, TaskResponse};
+use crate::components::markdown::Markdown;
 use crate::state::auth::AuthState;
 
 fn format_budget(cents: i64, currency: &str) -> String {
@@ -290,7 +291,7 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
                 </div>
                 {desc
                     .map(|d| {
-                        view! { <p class="task-desc">{d}</p> }.into_any()
+                        view! { <Markdown content=d class="task-desc".to_string() /> }.into_any()
                     })
                     .unwrap_or_else(|| view! {}.into_any())}
                 {(!budget_display.is_empty())

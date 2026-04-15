@@ -15,6 +15,14 @@ pub struct Model {
     pub link_url: Option<String>,
     pub read_at: Option<DateTimeWithTimeZone>,
     pub created_at: DateTimeWithTimeZone,
+    /// User who triggered this notification (the sender for messages, the
+    /// stoker for stokes, etc.). Used to coalesce per-actor rows. DB
+    /// default is NULL so existing rows load cleanly.
+    pub related_user_id: Option<Uuid>,
+    /// How many events this row collapses. 1 means a single event; >1 means
+    /// this row has been bumped by subsequent same-kind same-actor events.
+    /// DB default is 1.
+    pub count: i32,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

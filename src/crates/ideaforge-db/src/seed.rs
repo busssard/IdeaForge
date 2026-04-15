@@ -104,7 +104,7 @@ async fn seed_ideas(db: &DatabaseConnection, users: &[SeededUser]) -> Result<(),
     ];
 
     for (user_idx, title, summary, description, openness, cat_id) in &ideas {
-        let (existing, _) = repo.list(None, None, None, None, false, 1, 100).await?;
+        let (existing, _) = repo.list(None, None, None, None, false, None, None, 1, 100).await?;
         if existing.iter().any(|i| i.title == *title) {
             tracing::debug!("Idea '{title}' already exists, skipping");
             continue;

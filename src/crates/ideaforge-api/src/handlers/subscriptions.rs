@@ -6,7 +6,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::post,
+    routing::{get, post},
     Json, Router,
 };
 use serde::Serialize;
@@ -19,6 +19,34 @@ use ideaforge_db::repositories::subscription_repo::SubscriptionRepository;
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/:id/subscribe", post(subscribe).delete(unsubscribe))
+        .route("/:id/subscribe/status", get(subscription_status))
+}
+
+#[derive(Debug, Serialize)]
+pub struct SubscriptionStatusResponse {
+    pub subscribed: bool,
+}
+
+async fn subscription_status(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(id): Path<Uuid>,
+) -> impl IntoResponse {
+    let repo = SubscriptionRepository::new(state.db.connection());
+    match repo.exists(auth.user_id, id).await {
+        Ok(subscribed) => {
+            Json(SubscriptionStatusResponse { subscribed }).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to check subscription status: {e}");
+            err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Internal server error",
+            )
+            .into_response()
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -46,15 +74,22 @@ async fn subscribe(
 ) -> impl IntoResponse {
     let repo = SubscriptionRepository::new(state.db.connection());
 
-    // Check if already subscribed
+    // Idempotent: if already subscribed, return 200 OK with a minimal response
+    // rather than 409. The end state is what the client wanted either way, and a
+    // 409 forced the frontend to silently revert its optimistic update — which
+    // read as "subscribe does nothing".
     match repo.exists(auth.user_id, id).await {
         Ok(true) => {
-            return err(
-                StatusCode::CONFLICT,
-                "CONFLICT",
-                "Already subscribed to this idea",
+            return (
+                StatusCode::OK,
+                Json(SubscriptionResponse {
+                    id: Uuid::nil(),
+                    user_id: auth.user_id,
+                    idea_id: id,
+                    created_at: String::new(),
+                }),
             )
-            .into_response()
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to check subscription existence: {e}");
@@ -98,15 +133,9 @@ async fn unsubscribe(
 ) -> impl IntoResponse {
     let repo = SubscriptionRepository::new(state.db.connection());
 
+    // Idempotent: a missing subscription is treated as success, matching the
+    // symmetry of `subscribe`.
     match repo.delete(auth.user_id, id).await {
-        Ok(result) if result.rows_affected == 0 => {
-            err(
-                StatusCode::NOT_FOUND,
-                "NOT_FOUND",
-                "Subscription not found",
-            )
-            .into_response()
-        }
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => {
             tracing::error!("Failed to delete subscription: {e}");

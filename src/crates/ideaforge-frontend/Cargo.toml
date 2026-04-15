@@ -31,6 +31,20 @@ web-sys = { version = "0.3", features = [
     "MouseEvent",
     "Document",
     "console",
+    "File",
+    "FileList",
+    "FormData",
+    "Request",
+    "RequestInit",
+    "Headers",
+    "Response",
+    "Blob",
+    "PointerEvent",
+    "HtmlElement",
+    "CssStyleDeclaration",
+    "NodeList",
+    "Node",
+    "Element",
 ] }
 js-sys = "0.3"
 console_error_panic_hook = "0.1"
@@ -38,3 +52,30 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4", "serde", "js"] }
 chrono = { version = "0.4", features = ["serde", "wasmbind"] }
+
+# --- MLS (RFC 9420) end-to-end encrypted messaging ---
+# Tested WASM combo per openmls-wasm example. We start with the non-PQ
+# ciphersuite to de-risk the browser build; swap `openmls_rust_crypto` for
+# `openmls_libcrux_crypto` to enable the X-Wing (ML-KEM + X25519) hybrid
+# post-quantum ciphersuite once the skeleton is working.
+openmls = { version = "0.8", features = ["js"] }
+openmls_traits = "0.5"
+openmls_rust_crypto = "0.5"
+openmls_basic_credential = "0.5"
+openmls_memory_storage = "0.5"
+# The `js` feature is what keeps `getrandom` from panicking on
+# wasm32-unknown-unknown — openmls_rust_crypto pulls in getrandom 0.2.
+getrandom = { version = "0.2", features = ["js"] }
+base64 = "0.22"
+thiserror = "1"
+
+# --- Keystore: password-derived wrap key + symmetric wrap/unwrap ---
+# Argon2id for KDF (memory-hard, WASM-compatible).
+argon2 = { version = "0.5", default-features = false, features = ["alloc"] }
+# AES-256-GCM for authenticated encryption of the serialized MLS keystore.
+aes-gcm = { version = "0.10", default-features = false, features = ["aes", "alloc"] }
+rand = { version = "0.8", features = ["getrandom"] }
+
+# --- Markdown rendering for user-authored content ---
+# pulldown-cmark is CommonMark-compliant, fast, and ships WASM cleanly.
+pulldown-cmark = { version = "0.12", default-features = false, features = ["html"] }

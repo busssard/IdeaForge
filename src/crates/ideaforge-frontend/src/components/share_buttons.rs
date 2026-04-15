@@ -14,7 +14,7 @@ pub fn ShareButtons(
 ) -> impl IntoView {
     let url_enc = StoredValue::new(js_sys::encode_uri_component(&url).as_string().unwrap_or_default());
     let title_enc = StoredValue::new(js_sys::encode_uri_component(&title).as_string().unwrap_or_default());
-    let summary_enc = StoredValue::new(js_sys::encode_uri_component(&summary).as_string().unwrap_or_default());
+    let _summary_enc = StoredValue::new(js_sys::encode_uri_component(&summary).as_string().unwrap_or_default());
     let url_for_copy = StoredValue::new(url);
 
     let copied = RwSignal::new(false);

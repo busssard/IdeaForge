@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use super::enums::{IdeaMaturity, IdeaOpenness};
+use super::enums::{IdeaLifecycle, IdeaMaturity, IdeaOpenness};
 
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "ideas")]
@@ -15,6 +15,8 @@ pub struct Model {
     pub description: String,
     pub maturity: IdeaMaturity,
     pub openness: IdeaOpenness,
+    #[sea_orm(default_value = "not_started")]
+    pub lifecycle: IdeaLifecycle,
     pub category_id: Option<Uuid>,
     pub stoke_count: i32,
     #[sea_orm(column_type = "JsonBinary")]

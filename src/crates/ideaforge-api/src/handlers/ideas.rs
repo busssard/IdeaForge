@@ -37,9 +37,13 @@ pub struct ListIdeasQuery {
     pub category_id: Option<Uuid>,
     pub maturity: Option<String>,
     pub openness: Option<String>,
+    pub lifecycle: Option<String>,
     pub author_id: Option<Uuid>,
     pub page: Option<u64>,
     pub per_page: Option<u64>,
+    /// One of: `recent`, `oldest`, `sparks_desc`, `sparks_asc`, `title_asc`, `title_desc`.
+    /// Defaults to `recent` (most recently created first).
+    pub sort: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -62,6 +66,7 @@ pub struct UpdateIdeaRequest {
     pub summary: Option<String>,
     pub description: Option<String>,
     pub openness: Option<String>,
+    pub lifecycle: Option<String>,
     pub category_id: Option<Option<Uuid>>,
 }
 
@@ -76,6 +81,7 @@ pub struct IdeaResponse {
     pub description: String,
     pub maturity: String,
     pub openness: String,
+    pub lifecycle: String,
     pub category_id: Option<Uuid>,
     pub stoke_count: i32,
     pub has_stoked: bool,
@@ -174,6 +180,7 @@ fn idea_response(
         description: m.description.clone(),
         maturity: m.maturity.to_string(),
         openness: m.openness.to_string(),
+        lifecycle: m.lifecycle.to_string(),
         category_id: m.category_id,
         stoke_count: m.stoke_count,
         has_stoked,
@@ -242,6 +249,10 @@ async fn list_ideas(
 
     let maturity_filter = params.maturity.as_deref().and_then(IdeaMaturity::from_str_opt);
     let openness_filter = params.openness.as_deref().and_then(IdeaOpenness::from_str_opt);
+    let lifecycle_filter = params
+        .lifecycle
+        .as_deref()
+        .and_then(ideaforge_db::entities::enums::IdeaLifecycle::from_str_opt);
 
     // Exclude private ideas from public listing unless viewing own ideas
     let exclude_private = params.author_id.is_none() ||
@@ -255,6 +266,8 @@ async fn list_ideas(
             params.category_id,
             params.author_id,
             exclude_private,
+            lifecycle_filter,
+            params.sort.as_deref(),
             page,
             per_page,
         )
@@ -699,6 +712,10 @@ async fn update_idea(
         None => None,
     };
 
+    let lifecycle = body
+        .lifecycle
+        .as_deref()
+        .and_then(ideaforge_db::entities::enums::IdeaLifecycle::from_str_opt);
     match repo
         .update(
             id,
@@ -707,6 +724,7 @@ async fn update_idea(
             body.description.as_deref(),
             openness,
             body.category_id,
+            lifecycle,
         )
         .await
     {

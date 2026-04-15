@@ -33,6 +33,7 @@ impl<'a> IdeaRepository<'a> {
             description: Set(description.to_string()),
             maturity: Set(maturity),
             openness: Set(openness),
+            lifecycle: Set(crate::entities::enums::IdeaLifecycle::default()),
             category_id: Set(category_id),
             stoke_count: Set(0),
             looking_for_skills: Set(serde_json::json!([])),
@@ -57,6 +58,8 @@ impl<'a> IdeaRepository<'a> {
         category_id: Option<Uuid>,
         author_id: Option<Uuid>,
         exclude_private: bool,
+        lifecycle: Option<crate::entities::enums::IdeaLifecycle>,
+        sort: Option<&str>,
         page: u64,
         per_page: u64,
     ) -> Result<(Vec<idea::Model>, u64), DbErr> {
@@ -77,8 +80,44 @@ impl<'a> IdeaRepository<'a> {
         if exclude_private {
             query = query.filter(idea::Column::Openness.ne(IdeaOpenness::Private));
         }
+        if let Some(lc) = lifecycle {
+            query = query.filter(idea::Column::Lifecycle.eq(lc));
+        }
 
-        query = query.order_by_desc(idea::Column::CreatedAt);
+        // Member- and comment-count sorts are scalar subqueries against the
+        // respective join tables. SeaORM's fluent API can't express these
+        // directly, so we drop down to a raw `Expr::cust`.
+        let members_subq =
+            sea_orm::sea_query::Expr::cust("(SELECT COUNT(*) FROM team_members tm WHERE tm.idea_id = ideas.id)");
+        let comments_subq = sea_orm::sea_query::Expr::cust(
+            "(SELECT COUNT(*) FROM contributions c WHERE c.idea_id = ideas.id AND c.contribution_type = 'comment')"
+        );
+
+        query = match sort {
+            Some("oldest") => query.order_by_asc(idea::Column::CreatedAt),
+            Some("sparks_desc") => query
+                .order_by_desc(idea::Column::StokeCount)
+                .order_by_desc(idea::Column::CreatedAt),
+            Some("sparks_asc") => query
+                .order_by_asc(idea::Column::StokeCount)
+                .order_by_desc(idea::Column::CreatedAt),
+            Some("title_asc") => query.order_by_asc(idea::Column::Title),
+            Some("title_desc") => query.order_by_desc(idea::Column::Title),
+            Some("members_desc") => query
+                .order_by_desc(members_subq)
+                .order_by_desc(idea::Column::CreatedAt),
+            Some("members_asc") => query
+                .order_by_asc(members_subq)
+                .order_by_desc(idea::Column::CreatedAt),
+            Some("comments_desc") => query
+                .order_by_desc(comments_subq)
+                .order_by_desc(idea::Column::CreatedAt),
+            Some("comments_asc") => query
+                .order_by_asc(comments_subq)
+                .order_by_desc(idea::Column::CreatedAt),
+            // "recent" or anything else falls back to most-recent-first.
+            _ => query.order_by_desc(idea::Column::CreatedAt),
+        };
 
         let paginator = query.paginate(self.db, per_page);
         let total = paginator.num_items().await?;
@@ -95,6 +134,7 @@ impl<'a> IdeaRepository<'a> {
         description: Option<&str>,
         openness: Option<IdeaOpenness>,
         category_id: Option<Option<Uuid>>,
+        lifecycle: Option<crate::entities::enums::IdeaLifecycle>,
     ) -> Result<idea::Model, DbErr> {
         let model = idea::Entity::find_by_id(id)
             .one(self.db)
@@ -110,6 +150,9 @@ impl<'a> IdeaRepository<'a> {
         }
         if let Some(d) = description {
             active.description = Set(d.to_string());
+        }
+        if let Some(lc) = lifecycle {
+            active.lifecycle = Set(lc);
         }
         if let Some(o) = openness {
             active.openness = Set(o);

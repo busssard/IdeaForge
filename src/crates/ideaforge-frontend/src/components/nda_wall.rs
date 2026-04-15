@@ -39,7 +39,7 @@ pub fn NdaWall(
             match api::nda::sign_nda(&id, &name).await {
                 Ok(_) => {
                     signing.set(false);
-                    on_signed.call(());
+                    on_signed.run(());
                 }
                 Err(e) => {
                     error.set(e.message);

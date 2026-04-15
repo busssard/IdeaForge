@@ -33,6 +33,8 @@ impl<'a> NotificationRepository<'a> {
             link_url: Set(link_url.map(|s| s.to_string())),
             read_at: Set(None),
             created_at: Set(chrono::Utc::now().fixed_offset()),
+            related_user_id: Set(None),
+            count: Set(1),
         };
         model.insert(self.db).await
     }

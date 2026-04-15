@@ -3,7 +3,6 @@ use leptos_router::components::A;
 
 use crate::api::types::IdeaResponse;
 use crate::components::maturity_badge::MaturityBadge;
-use crate::components::stoke_button::StokeButton;
 use crate::components::visibility_badge::VisibilityBadge;
 use crate::state::auth::AuthState;
 
@@ -15,7 +14,6 @@ pub fn IdeaCard(idea: IdeaResponse) -> impl IntoView {
     let maturity = idea.maturity.clone();
     let openness = idea.openness.clone();
     let stoke_count = idea.stoke_count;
-    let idea_id_for_stoke = idea.id.clone();
     let created_date = idea.created_at.split('T').next().unwrap_or("").to_string();
     let has_stoked = idea.has_stoked.unwrap_or(false);
     let show_visibility = openness != "open"; // only show badge for non-default visibility
@@ -44,12 +42,14 @@ pub fn IdeaCard(idea: IdeaResponse) -> impl IntoView {
             </div>
             <span class="idea-card-author">"by " {author_name}</span>
             <p class="idea-card-summary">{summary}</p>
-            <div class="idea-card-footer" on:click=|ev: web_sys::MouseEvent| { ev.prevent_default(); ev.stop_propagation(); }>
-                <StokeButton
-                    idea_id=idea_id_for_stoke
-                    initial_count=stoke_count
-                    initial_stoked=has_stoked
-                />
+            <div class="idea-card-footer">
+                <span
+                    class=if has_stoked { "idea-card-sparks stoked" } else { "idea-card-sparks" }
+                    title="Open the idea to spark it"
+                >
+                    <span class="flame">{if has_stoked { "\u{1F525}" } else { "\u{1FAB5}" }}</span>
+                    <span>{stoke_count.to_string()}</span>
+                </span>
                 <span class="idea-card-meta">{created_date}</span>
             </div>
         </A>

@@ -12,3 +12,11 @@ rewrite = "/api/"
 [[proxy]]
 backend = "http://localhost:3000/health"
 rewrite = "/health"
+
+# Generate HASHES.txt from the SRI integrity attrs Trunk already emits.
+# Ship it alongside each release so users / auditors can verify the
+# deployed WASM matches the repo.
+[[hooks]]
+stage = "post_build"
+command = "bash"
+command_arguments = ["scripts/emit-hashes.sh"]

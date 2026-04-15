@@ -8,6 +8,7 @@ use crate::components::loading::Loading;
 /// Clearly separated from human interaction.
 #[component]
 pub fn BotSection(idea_id: String) -> impl IntoView {
+    let _ = idea_id; // reserved for future per-idea bot filtering
     let collapsed = RwSignal::new(true);
 
     let bots = LocalResource::new(move || async move {

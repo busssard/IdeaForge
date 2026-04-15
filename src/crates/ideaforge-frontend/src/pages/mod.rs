@@ -9,3 +9,5 @@ pub mod settings;
 pub mod not_found;
 pub mod people;
 pub mod notifications;
+pub mod messages;
+pub mod about;

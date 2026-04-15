@@ -4,6 +4,8 @@ use leptos_router::hooks::use_params_map;
 
 use crate::api;
 use crate::components::loading::Loading;
+use crate::components::markdown::Markdown;
+use crate::components::message_privately_button::MessagePrivatelyButton;
 
 #[component]
 pub fn ProfilePage() -> impl IntoView {
@@ -91,7 +93,7 @@ pub fn ProfilePage() -> impl IntoView {
                                             view! {
                                                 <div class="profile-bio">
                                                     <h3>"About"</h3>
-                                                    <p>{bio}</p>
+                                                    <Markdown content=bio />
                                                 </div>
                                             }.into_any()
                                         } else {
@@ -131,6 +133,7 @@ pub fn ProfilePage() -> impl IntoView {
                                         })}
 
                                         <div class="profile-actions mt-md">
+                                            <MessagePrivatelyButton target_user_id=u.id.clone() />
                                             <A href="/people" attr:class="btn btn-secondary">"Discover People"</A>
                                             <A href="/browse" attr:class="btn btn-secondary">"Forge Floor"</A>
                                         </div>

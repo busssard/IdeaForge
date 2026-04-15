@@ -23,8 +23,12 @@ pub fn Protected(children: Children) -> impl IntoView {
 
     let child_view = children();
 
+    // `display: contents` removes the wrapper from layout entirely so the
+    // real child participates directly in whatever layout its parent
+    // established (flex, grid, etc.). Switch to `display: none` to hide the
+    // pre-auth content without disturbing neighbours.
     let show_content = move || {
-        if auth.is_authenticated() { "" } else { "display:none" }
+        if auth.is_authenticated() { "display: contents" } else { "display:none" }
     };
     let show_loading = move || {
         if auth.loading.get() && !auth.is_authenticated() { "" } else { "display:none" }

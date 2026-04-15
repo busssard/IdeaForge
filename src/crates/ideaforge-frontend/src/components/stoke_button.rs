@@ -8,6 +8,7 @@ pub fn StokeButton(
     idea_id: String,
     initial_count: i32,
     #[prop(default = false)] initial_stoked: bool,
+    #[prop(default = false)] prominent: bool,
 ) -> impl IntoView {
     let count = RwSignal::new(initial_count);
     let stoked = RwSignal::new(initial_stoked);
@@ -62,14 +63,22 @@ pub fn StokeButton(
         });
     };
 
+    let base_class = if prominent { "stoke-btn stoke-btn-prominent" } else { "stoke-btn" };
+
     view! {
         <button
-            class=move || if stoked.get() { "stoke-btn stoked" } else { "stoke-btn" }
+            class=move || if stoked.get() { format!("{base_class} stoked") } else { base_class.to_string() }
             on:click=toggle
             disabled=move || loading.get()
+            title=if prominent { "Spark this idea" } else { "" }
         >
             <span class="flame">{move || if stoked.get() { "\u{1F525}" } else { "\u{1FAB5}" }}</span>
-            <span>{move || count.get().to_string()}</span>
+            <span class="stoke-btn-count">{move || count.get().to_string()}</span>
+            {prominent.then(|| view! {
+                <span class="stoke-btn-label">
+                    {move || if stoked.get() { "Sparked" } else { "Spark this idea" }}
+                </span>
+            })}
         </button>
     }
 }

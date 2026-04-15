@@ -6,6 +6,7 @@ use wasm_bindgen::JsCast;
 
 use crate::api;
 use crate::api::types::{ContributionResponse, CreateContributionRequest};
+use crate::components::markdown::Markdown;
 use crate::state::auth::AuthState;
 
 #[component]
@@ -161,7 +162,7 @@ pub fn CommentSection(idea_id: String) -> impl IntoView {
                                                     </A>
                                                     <span class="comment-date">{date}</span>
                                                 </div>
-                                                <p class="comment-body">{c.body.clone()}</p>
+                                                <Markdown content=c.body.clone() class="comment-body".to_string() />
                                             </div>
                                         }
                                     })

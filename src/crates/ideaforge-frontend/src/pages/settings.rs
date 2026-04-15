@@ -2,6 +2,7 @@ use leptos::prelude::*;
 
 use crate::api;
 use crate::api::types::UpdateMeRequest;
+use crate::components::avatar_uploader::AvatarUploader;
 use crate::components::loading::Loading;
 use crate::components::protected::Protected;
 use crate::state::auth::AuthState;
@@ -109,6 +110,13 @@ fn SettingsContent() -> impl IntoView {
                                     let bio = user.bio.clone();
                                     let email = user.email.clone();
                                     let role = user.role.clone();
+                                    let avatar_url = user.avatar_url.clone();
+                                    let initial_letter = display_name
+                                        .chars()
+                                        .next()
+                                        .unwrap_or('?')
+                                        .to_uppercase()
+                                        .to_string();
                                     let skills_str = user.skills.as_array()
                                         .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>().join(", "))
                                         .unwrap_or_default();
@@ -116,6 +124,18 @@ fn SettingsContent() -> impl IntoView {
                                     let availability = user.availability.clone().unwrap_or_default();
 
                                     view! {
+                                        <div class="card mb-lg">
+                                            <h3>"Profile photo"</h3>
+                                            <AvatarUploader
+                                                initial_url=avatar_url
+                                                initial_letter=initial_letter
+                                                on_uploaded=Callback::new(move |_new_url: String| {
+                                                    wasm_bindgen_futures::spawn_local(async move {
+                                                        auth.load_user().await;
+                                                    });
+                                                })
+                                            />
+                                        </div>
                                         <div class="card">
                                             <form on:submit=on_submit>
                                                 // Error display

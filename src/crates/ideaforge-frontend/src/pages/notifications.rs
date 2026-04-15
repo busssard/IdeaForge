@@ -103,6 +103,8 @@ fn NotificationItem(notif: NotificationResponse, refresh: RwSignal<u32>) -> impl
         "milestone" => "\u{1F3C6}",
         "bot_analysis" => "\u{1F916}",
         "mention" => "\u{1F4E2}",
+        "message" => "\u{1F4E7}",
+        "nda_signed" => "\u{1F512}",
         _ => "\u{1F514}",
     };
 
@@ -121,21 +123,43 @@ fn NotificationItem(notif: NotificationResponse, refresh: RwSignal<u32>) -> impl
         });
     };
 
+    // When a user clicks the whole row, we treat it as "view + mark read".
+    let id_for_row = notif.id.clone();
+    let row_mark_read = move || {
+        let id = id_for_row.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            let _ = api::notifications::mark_read(&id).await;
+            refresh.set(refresh.get_untracked() + 1);
+        });
+    };
+    // For the `message` kind we drop the redundant "From X" line since the
+    // title already carries the sender name (e.g. "6 new messages from Bob").
+    let show_message_body = kind != "message" && !message.is_empty();
+
     view! {
         <div class=card_class>
             <span class="notification-icon">{kind_icon}</span>
             <div class="notification-content">
                 <p class="notification-title">{title}</p>
-                <p class="notification-message">{message}</p>
-                <div class="notification-meta">
-                    <span class="notification-time">{created}</span>
-                    {link_url.map(|url| view! {
-                        <A href=url attr:class="notification-link">"View"</A>
-                    })}
-                    {is_unread.then(|| view! {
-                        <button class="btn-text" on:click=mark_read>"Mark read"</button>
-                    })}
-                </div>
+                {show_message_body.then(|| view! {
+                    <p class="notification-message">{message}</p>
+                })}
+            </div>
+            <div class="notification-actions">
+                <span class="notification-time">{created}</span>
+                {link_url.map(|url| {
+                    let on_view = row_mark_read.clone();
+                    view! {
+                        <A
+                            href=url
+                            attr:class="notification-link"
+                            on:click=move |_| on_view()
+                        >"View"</A>
+                    }
+                })}
+                {is_unread.then(|| view! {
+                    <button class="btn-text" on:click=mark_read>"Mark read"</button>
+                })}
             </div>
         </div>
     }

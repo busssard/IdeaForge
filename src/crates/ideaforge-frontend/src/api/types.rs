@@ -45,6 +45,8 @@ pub struct IdeaResponse {
     pub description: String,
     pub maturity: String,
     pub openness: String,
+    #[serde(default)]
+    pub lifecycle: String,
     pub category_id: Option<String>,
     pub stoke_count: i32,
     #[serde(default)]
@@ -92,6 +94,8 @@ pub struct UpdateIdeaRequest {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub openness: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lifecycle: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub category_id: Option<Option<String>>,
 }

@@ -12,6 +12,11 @@ mod m20260212_100001_phase2_extensions;
 mod m20260325_000001_nda_system;
 mod m20260325_000002_task_boards_and_team_labels;
 mod m20260325_000003_task_budget;
+mod m20260414_000001_idea_lifecycle;
+mod m20260414_000002_mls_messaging;
+mod m20260414_000003_mls_keystore;
+mod m20260414_000004_message_notification;
+mod m20260414_000005_notification_related_user;
 
 pub struct Migrator;
 
@@ -31,6 +36,11 @@ impl MigratorTrait for Migrator {
             Box::new(m20260325_000001_nda_system::Migration),
             Box::new(m20260325_000002_task_boards_and_team_labels::Migration),
             Box::new(m20260325_000003_task_budget::Migration),
+            Box::new(m20260414_000001_idea_lifecycle::Migration),
+            Box::new(m20260414_000002_mls_messaging::Migration),
+            Box::new(m20260414_000003_mls_keystore::Migration),
+            Box::new(m20260414_000004_message_notification::Migration),
+            Box::new(m20260414_000005_notification_related_user::Migration),
         ]
     }
 }

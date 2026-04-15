@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use leptos_router::components::A;
+use leptos_router::hooks::use_location;
 
 use crate::api;
 use crate::state::auth::AuthState;
@@ -10,42 +11,47 @@ use crate::state::auth::AuthState;
 pub fn OnboardingChecklist() -> impl IntoView {
     let auth = expect_context::<AuthState>();
     let dismissed = RwSignal::new(is_dismissed());
+    let dismissed_forever = RwSignal::new(is_dismissed_forever());
+    let location = use_location();
 
-    // Track completion of onboarding steps
     let has_profile = Signal::derive(move || {
         auth.user.get().map_or(false, |u| !u.display_name.is_empty())
     });
 
-    // Track whether user has created at least one idea
     let has_idea = RwSignal::new(false);
-    // Track whether user has stoked at least one idea
     let has_stoke = RwSignal::new(false);
-    // Track whether user has visited the people page (via localStorage)
     let has_visited_people = RwSignal::new(check_visited_people());
 
-    // Fetch idea count and stoke count on mount
-    {
-        let user_signal = auth.user;
-        wasm_bindgen_futures::spawn_local(async move {
-            let user_id = user_signal.get_untracked().map(|u| u.id).unwrap_or_default();
-            if user_id.is_empty() {
-                return;
-            }
+    // Refetch checklist state whenever the route changes (covers post-action
+    // navigation: stoke an idea on /browse → return to /home → checklist updates).
+    Effect::new(move |_| {
+        let _ = location.pathname.get();
+        // Re-read localStorage flags that may have changed on other pages.
+        has_visited_people.set(check_visited_people());
 
-            // Check if user has created any ideas
-            if let Ok(resp) = api::ideas::list_ideas(1, 1, None, None, None, Some(&user_id)).await {
+        let user_id = auth.user.get_untracked().map(|u| u.id).unwrap_or_default();
+        if user_id.is_empty() {
+            return;
+        }
+        let user_id_for_ideas = user_id.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            if let Ok(resp) = api::ideas::list_ideas(1, 1, None, None, None, Some(&user_id_for_ideas)).await {
                 has_idea.set(resp.meta.total > 0);
             }
-
-            // Check if user has stoked any ideas
             if let Ok(resp) = api::ideas::list_my_stoked_ideas(1, 1).await {
                 has_stoke.set(resp.meta.total > 0);
             }
         });
-    }
+    });
 
     let dismiss = move |_: web_sys::MouseEvent| {
         set_dismissed();
+        dismissed.set(true);
+    };
+
+    let dismiss_forever = move |_: web_sys::MouseEvent| {
+        set_dismissed_forever();
+        dismissed_forever.set(true);
         dismissed.set(true);
     };
 
@@ -53,8 +59,9 @@ pub fn OnboardingChecklist() -> impl IntoView {
         {move || {
             let is_authenticated = auth.user.get().is_some();
             let is_dismissed = dismissed.get();
+            let is_dismissed_forever = dismissed_forever.get();
 
-            if !is_authenticated || is_dismissed {
+            if !is_authenticated || is_dismissed || is_dismissed_forever {
                 view! { <div></div> }.into_any()
             } else {
                 let profile_done = has_profile.get();
@@ -103,6 +110,12 @@ pub fn OnboardingChecklist() -> impl IntoView {
                                 <A href="/people" attr:class="step-link">"Discover collaborators"</A>
                             </li>
                         </ul>
+
+                        <div class="onboarding-footer">
+                            <button class="onboarding-dismiss-forever" on:click=dismiss_forever>
+                                "Don't show again"
+                            </button>
+                        </div>
                     </div>
                 }.into_any()
             }
@@ -122,6 +135,21 @@ fn set_dismissed() {
         .and_then(|w| w.local_storage().ok().flatten())
     {
         let _ = storage.set_item("ideaforge_onboarding_dismissed", "true");
+    }
+}
+
+fn is_dismissed_forever() -> bool {
+    web_sys::window()
+        .and_then(|w| w.local_storage().ok().flatten())
+        .and_then(|s| s.get_item("ideaforge_onboarding_dismissed_forever").ok().flatten())
+        .map_or(false, |v| v == "true")
+}
+
+fn set_dismissed_forever() {
+    if let Some(storage) = web_sys::window()
+        .and_then(|w| w.local_storage().ok().flatten())
+    {
+        let _ = storage.set_item("ideaforge_onboarding_dismissed_forever", "true");
     }
 }
 

@@ -9,6 +9,31 @@ pub async fn list_ideas(
     sort: Option<&str>,
     author_id: Option<&str>,
 ) -> Result<IdeaListResponse, client::ApiError> {
+    list_ideas_full(page, per_page, category, maturity, None, sort, author_id).await
+}
+
+pub async fn list_ideas_full(
+    page: u64,
+    per_page: u64,
+    category: Option<&str>,
+    maturity: Option<&str>,
+    openness: Option<&str>,
+    sort: Option<&str>,
+    author_id: Option<&str>,
+) -> Result<IdeaListResponse, client::ApiError> {
+    list_ideas_v2(page, per_page, category, maturity, openness, None, sort, author_id).await
+}
+
+pub async fn list_ideas_v2(
+    page: u64,
+    per_page: u64,
+    category: Option<&str>,
+    maturity: Option<&str>,
+    openness: Option<&str>,
+    lifecycle: Option<&str>,
+    sort: Option<&str>,
+    author_id: Option<&str>,
+) -> Result<IdeaListResponse, client::ApiError> {
     let mut url = format!("/api/v1/ideas?page={page}&per_page={per_page}");
     if let Some(c) = category {
         if !c.is_empty() {
@@ -18,6 +43,16 @@ pub async fn list_ideas(
     if let Some(m) = maturity {
         if !m.is_empty() {
             url.push_str(&format!("&maturity={m}"));
+        }
+    }
+    if let Some(o) = openness {
+        if !o.is_empty() {
+            url.push_str(&format!("&openness={o}"));
+        }
+    }
+    if let Some(l) = lifecycle {
+        if !l.is_empty() {
+            url.push_str(&format!("&lifecycle={l}"));
         }
     }
     if let Some(s) = sort {

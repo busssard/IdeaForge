@@ -195,16 +195,28 @@ impl<'a> UserRepository<'a> {
             }
         }
 
-        // Sorting
-        match sort {
-            "recently_joined" => {
-                query = query.order_by_desc(user::Column::CreatedAt);
-            }
-            "most_active" | _ => {
-                // Default to recently_joined for now
-                query = query.order_by_desc(user::Column::CreatedAt);
-            }
-        }
+        // Aggregate sorts use scalar subqueries against ideas / stokes — can't
+        // be expressed in SeaORM's fluent API, so we drop down to Expr::cust.
+        let ideas_subq = Expr::cust(
+            "(SELECT COUNT(*) FROM ideas i WHERE i.author_id = users.id AND i.archived_at IS NULL)"
+        );
+        let stokes_subq =
+            Expr::cust("(SELECT COUNT(*) FROM stokes s WHERE s.user_id = users.id)");
+        let activity_subq = Expr::cust(
+            "((SELECT COUNT(*) FROM ideas i WHERE i.author_id = users.id AND i.archived_at IS NULL) + \
+             (SELECT COUNT(*) FROM stokes s WHERE s.user_id = users.id))"
+        );
+
+        query = match sort {
+            "oldest" => query.order_by_asc(user::Column::CreatedAt),
+            "name_asc" => query.order_by_asc(user::Column::DisplayName),
+            "name_desc" => query.order_by_desc(user::Column::DisplayName),
+            "most_ideas" => query.order_by_desc(ideas_subq),
+            "most_stokes" => query.order_by_desc(stokes_subq),
+            "most_active" => query.order_by_desc(activity_subq),
+            // "recently_joined" or anything unrecognised → newest first.
+            _ => query.order_by_desc(user::Column::CreatedAt),
+        };
 
         // Count total
         let total = query.clone().count(self.db).await?;

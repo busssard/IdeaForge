@@ -4,16 +4,36 @@ use leptos_router::components::A;
 use crate::api;
 use crate::state::auth::AuthState;
 
+/// How often to re-poll the unread count while the nav is mounted. 30s is
+/// a reasonable compromise between "marker shows up quickly after a new
+/// message arrives" and "don't hammer the API".
+const POLL_INTERVAL_MS: u32 = 30_000;
+
 /// Notification bell icon in the navbar showing unread count.
 #[component]
 pub fn NotificationBell() -> impl IntoView {
     let auth = expect_context::<AuthState>();
 
-    let unread = LocalResource::new(move || async move {
-        if auth.user.get_untracked().is_some() {
-            api::notifications::unread_count().await.ok().map(|r| r.unread_count)
-        } else {
-            None
+    // Tick bumps every POLL_INTERVAL_MS so the resource re-runs and the badge
+    // reflects newly-arrived notifications without a page refresh.
+    let tick = RwSignal::new(0u32);
+    Effect::new(move |_| {
+        wasm_bindgen_futures::spawn_local(async move {
+            loop {
+                gloo_timers::future::TimeoutFuture::new(POLL_INTERVAL_MS).await;
+                tick.update(|t| *t = t.wrapping_add(1));
+            }
+        });
+    });
+
+    let unread = LocalResource::new(move || {
+        let _ = tick.get();
+        async move {
+            if auth.user.get_untracked().is_some() {
+                api::notifications::unread_count().await.ok().map(|r| r.unread_count)
+            } else {
+                None
+            }
         }
     });
 

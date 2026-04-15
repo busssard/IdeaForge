@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use leptos_router::components::A;
 use leptos_router::hooks::use_navigate;
 
+use crate::components::forge_logo::ForgeLogo;
 use crate::components::notification_bell::NotificationBell;
 use crate::state::auth::AuthState;
 
@@ -19,7 +20,7 @@ pub fn Navbar() -> impl IntoView {
         <nav class="navbar">
             <div class="navbar-inner">
                 <A href="/" attr:class="navbar-brand">
-                    <img src="/static/logo.svg" alt="" width="32" height="32" />
+                    <ForgeLogo class="navbar-logo".to_string() />
                     <span class="navbar-brand-text">"IdeaForge"</span>
                 </A>
 
@@ -35,6 +36,9 @@ pub fn Navbar() -> impl IntoView {
                             view! {
                                 <A href="/ideas/new" attr:class="btn btn-primary btn-sm">
                                     "Bring to the Forge"
+                                </A>
+                                <A href="/messages" attr:class="btn btn-ghost btn-sm">
+                                    "\u{1F510} Messages"
                                 </A>
                                 <NotificationBell />
                                 <A href="/settings" attr:class="btn btn-ghost btn-sm">

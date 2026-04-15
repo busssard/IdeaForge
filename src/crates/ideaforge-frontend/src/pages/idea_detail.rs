@@ -7,6 +7,7 @@ use crate::api::types::UpdateIdeaRequest;
 use crate::components::bot_section::BotSection;
 use crate::components::comment_section::CommentSection;
 use crate::components::loading::Loading;
+use crate::components::markdown::Markdown;
 use crate::components::maturity_badge::MaturityBadge;
 use crate::components::nda_wall::NdaWall;
 use crate::components::share_buttons::ShareButtons;
@@ -91,42 +92,18 @@ pub fn IdeaDetailPage() -> impl IntoView {
                             let edit_summary = RwSignal::new(idea.summary.clone());
                             let edit_description = RwSignal::new(idea.description.clone());
                             let edit_openness = RwSignal::new(idea.openness.clone());
+                            let edit_lifecycle = RwSignal::new(
+                                if idea.lifecycle.is_empty() { "not_started".to_string() } else { idea.lifecycle.clone() }
+                            );
 
                             let idea_id_edit = idea.id.clone();
                             let refetch = refetch_trigger;
-                            let on_save = move |ev: web_sys::SubmitEvent| {
-                                ev.prevent_default();
-                                if edit_saving.get_untracked() {
-                                    return;
-                                }
 
-                                edit_saving.set(true);
-                                edit_error.set(String::new());
-                                let id = idea_id_edit.clone();
-                                let req = UpdateIdeaRequest {
-                                    title: Some(edit_title.get_untracked()),
-                                    summary: Some(edit_summary.get_untracked()),
-                                    description: Some(edit_description.get_untracked()),
-                                    openness: Some(edit_openness.get_untracked()),
-                                    category_id: None,
-                                };
-
-                                wasm_bindgen_futures::spawn_local(async move {
-                                    match api::ideas::update_idea(&id, req).await {
-                                        Ok(_) => {
-                                            editing.set(false);
-                                            refetch.set(refetch.get_untracked() + 1);
-                                        }
-                                        Err(e) => edit_error.set(e.message),
-                                    }
-                                    edit_saving.set(false);
-                                });
-                            };
-
-                            let on_cancel = move |_: web_sys::MouseEvent| {
-                                editing.set(false);
-                                edit_error.set(String::new());
-                            };
+                            // Owned clones for reactive closures (avoid borrowing &Idea)
+                            let title_view = idea.title.clone();
+                            let summary_view = idea.summary.clone();
+                            let description_view = idea.description.clone();
+                            let maturity_view = idea.maturity.clone();
 
                             view! {
                                 <div class="idea-detail">
@@ -148,7 +125,7 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                             } else {
                                                 view! {
                                                     <h1 class="idea-detail-title">
-                                                        {idea.title.clone()}
+                                                        {title_view.clone()}
                                                     </h1>
                                                 }
                                                     .into_any()
@@ -156,7 +133,7 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                         }}
 
                                         <div class="idea-detail-badges">
-                                            <MaturityBadge maturity=idea.maturity.clone() />
+                                            <MaturityBadge maturity=maturity_view.clone() />
                                             <VisibilityBadge openness=openness_for_badge />
                                         </div>
                                         <div class="idea-detail-meta">
@@ -193,6 +170,38 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                     // Edit form for summary, description, openness
                                     {move || {
                                         if editing.get() {
+                                            let id_for_save = idea_id_edit.clone();
+                                            let on_save = move |ev: web_sys::SubmitEvent| {
+                                                ev.prevent_default();
+                                                if edit_saving.get_untracked() {
+                                                    return;
+                                                }
+                                                edit_saving.set(true);
+                                                edit_error.set(String::new());
+                                                let id = id_for_save.clone();
+                                                let req = UpdateIdeaRequest {
+                                                    title: Some(edit_title.get_untracked()),
+                                                    summary: Some(edit_summary.get_untracked()),
+                                                    description: Some(edit_description.get_untracked()),
+                                                    openness: Some(edit_openness.get_untracked()),
+                                                    lifecycle: Some(edit_lifecycle.get_untracked()),
+                                                    category_id: None,
+                                                };
+                                                wasm_bindgen_futures::spawn_local(async move {
+                                                    match api::ideas::update_idea(&id, req).await {
+                                                        Ok(_) => {
+                                                            editing.set(false);
+                                                            refetch.set(refetch.get_untracked() + 1);
+                                                        }
+                                                        Err(e) => edit_error.set(e.message),
+                                                    }
+                                                    edit_saving.set(false);
+                                                });
+                                            };
+                                            let on_cancel = move |_: web_sys::MouseEvent| {
+                                                editing.set(false);
+                                                edit_error.set(String::new());
+                                            };
                                             view! {
                                                 <form
                                                     class="idea-edit-form card mb-lg"
@@ -287,6 +296,45 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                                         </select>
                                                     </div>
 
+                                                    <div class="form-group">
+                                                        <label class="form-label">"Status"</label>
+                                                        <select
+                                                            class="form-select"
+                                                            on:change=move |ev| {
+                                                                edit_lifecycle
+                                                                    .set(event_target_value(&ev));
+                                                            }
+                                                        >
+                                                            <option
+                                                                value="not_started"
+                                                                selected=move || {
+                                                                    edit_lifecycle.get()
+                                                                        == "not_started"
+                                                                }
+                                                            >
+                                                                "Not started"
+                                                            </option>
+                                                            <option
+                                                                value="ongoing"
+                                                                selected=move || {
+                                                                    edit_lifecycle.get()
+                                                                        == "ongoing"
+                                                                }
+                                                            >
+                                                                "Ongoing"
+                                                            </option>
+                                                            <option
+                                                                value="finished"
+                                                                selected=move || {
+                                                                    edit_lifecycle.get()
+                                                                        == "finished"
+                                                                }
+                                                            >
+                                                                "Finished"
+                                                            </option>
+                                                        </select>
+                                                    </div>
+
                                                     <div class="idea-edit-actions">
                                                         <button
                                                             class="btn btn-primary btn-sm"
@@ -327,7 +375,7 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                                         class="mt-sm"
                                                         style="color: var(--text-secondary)"
                                                     >
-                                                        {idea.summary.clone()}
+                                                        {summary_view.clone()}
                                                     </p>
                                                 </div>
                                             }
@@ -354,9 +402,10 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                             {move || {
                                                 if !editing.get() {
                                                     view! {
-                                                        <div class="idea-detail-body">
-                                                            {idea.description.clone()}
-                                                        </div>
+                                                        <Markdown
+                                                            content=description_view.clone()
+                                                            class="idea-detail-body".to_string()
+                                                        />
                                                     }
                                                         .into_any()
                                                 } else {
@@ -369,6 +418,7 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                                     idea_id=idea_id.clone()
                                                     initial_count=idea.stoke_count
                                                     initial_stoked=has_stoked
+                                                    prominent=true
                                                 />
                                                 <SubscribeButton idea_id=idea_id_subscribe />
                                                 <ShareButtons

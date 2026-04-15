@@ -33,9 +33,9 @@ repository = "https://github.com/ideaforge/ideaforge"
 tokio = { version = "1", features = ["full"] }
 
 # Web framework
-axum = { version = "0.7", features = ["ws", "macros"] }
+axum = { version = "0.7", features = ["ws", "macros", "multipart"] }
 tower = { version = "0.4", features = ["full"] }
-tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip", "set-header", "request-id", "propagate-header"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip", "set-header", "request-id", "propagate-header", "fs"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
 http = "1"
 
@@ -61,6 +61,7 @@ chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1"
 anyhow = "1"
 async-trait = "0.1"
+base64 = "0.22"
 config = "0.14"
 dotenvy = "0.15"
 validator = { version = "0.19", features = ["derive"] }

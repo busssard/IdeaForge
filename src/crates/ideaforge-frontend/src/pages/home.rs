@@ -3,6 +3,7 @@ use leptos_router::components::A;
 
 use crate::api;
 use crate::api::types::IdeaResponse;
+use crate::components::forge_logo::ForgeLogo;
 use crate::components::idea_card::IdeaCard;
 use crate::components::loading::Loading;
 
@@ -14,6 +15,7 @@ pub fn HomePage() -> impl IntoView {
 
     view! {
         <section class="hero">
+            <ForgeLogo class="hero-logo".to_string() />
             <h1 class="hero-title">"Where Ideas Take Shape"</h1>
             <p class="hero-subtitle">
                 "IdeaForge connects entrepreneurs, makers, investors, and creatives "

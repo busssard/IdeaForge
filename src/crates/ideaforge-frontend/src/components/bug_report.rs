@@ -12,6 +12,7 @@ pub fn BugReportButton() -> impl IntoView {
 
     let textarea_ref = NodeRef::<leptos::html::Textarea>::new();
     let severity_ref = NodeRef::<leptos::html::Select>::new();
+    let kind_ref = NodeRef::<leptos::html::Select>::new();
 
     let toggle = move |_: web_sys::MouseEvent| {
         show_form.set(!show_form.get_untracked());
@@ -45,6 +46,14 @@ pub fn BugReportButton() -> impl IntoView {
             })
             .unwrap_or_else(|| "normal".to_string());
 
+        let kind = kind_ref
+            .get()
+            .map(|el| {
+                let el: &web_sys::HtmlSelectElement = el.unchecked_ref();
+                el.value()
+            })
+            .unwrap_or_else(|| "bug".to_string());
+
         let page_url = web_sys::window()
             .and_then(|w| w.location().href().ok())
             .unwrap_or_default();
@@ -52,9 +61,11 @@ pub fn BugReportButton() -> impl IntoView {
         submitting.set(true);
         error_msg.set(String::new());
 
+        let tagged = format!("[{}] {}", kind.to_uppercase(), description.trim());
+
         wasm_bindgen_futures::spawn_local(async move {
             let body = serde_json::json!({
-                "description": description.trim(),
+                "description": tagged,
                 "page_url": page_url,
                 "severity": severity,
             });
@@ -82,13 +93,14 @@ pub fn BugReportButton() -> impl IntoView {
     };
 
     view! {
-        // Floating bug report button
+        // Floating feedback / bug / feature-request button
         <button
             class="bug-report-fab"
             on:click=toggle
-            title="Report a bug"
+            title="Report a bug, request a feature, or send feedback"
+            aria-label="Feedback"
         >
-            {move || if show_form.get() { "\u{2715}" } else { "\u{1F41B}" }}
+            {move || if show_form.get() { "\u{2715}" } else { "\u{1F4AC}" }}
         </button>
 
         // Bug report form overlay
@@ -100,7 +112,7 @@ pub fn BugReportButton() -> impl IntoView {
                 if submitted.get() {
                     view! {
                         <div class="bug-report-success">
-                            <p>"Bug report saved. Thanks!"</p>
+                            <p>"Thanks! Your feedback was saved."</p>
                             <button class="btn btn-sm btn-ghost" on:click=move |_| {
                                 submitted.set(false);
                                 show_form.set(false);
@@ -110,7 +122,10 @@ pub fn BugReportButton() -> impl IntoView {
                 } else {
                     view! {
                         <form class="bug-report-form" on:submit=on_submit>
-                            <h4>"Report a Bug"</h4>
+                            <h4>"Send Feedback"</h4>
+                            <p class="bug-report-hint">
+                                "Report a bug, suggest a feature, or share any feedback. Saved to bugs.md."
+                            </p>
 
                             {move || {
                                 let err = error_msg.get();
@@ -121,14 +136,20 @@ pub fn BugReportButton() -> impl IntoView {
                                 }
                             }}
 
+                            <select node_ref=kind_ref aria-label="Type">
+                                <option value="bug" selected>"\u{1F41B} Bug"</option>
+                                <option value="feature">"\u{2728} Feature request"</option>
+                                <option value="feedback">"\u{1F4AC} General feedback"</option>
+                            </select>
+
                             <textarea
                                 node_ref=textarea_ref
-                                placeholder="What went wrong? What did you expect?"
+                                placeholder="What went wrong, what would you like to see, or what's on your mind?"
                                 rows="4"
                                 required
                             ></textarea>
 
-                            <select node_ref=severity_ref>
+                            <select node_ref=severity_ref aria-label="Severity">
                                 <option value="low">"Minor / cosmetic"</option>
                                 <option value="normal" selected>"Normal"</option>
                                 <option value="high">"Major / broken feature"</option>

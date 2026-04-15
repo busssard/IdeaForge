@@ -98,6 +98,45 @@ impl IdeaMaturity {
     }
 }
 
+/// PostgreSQL enum: idea_lifecycle
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "idea_lifecycle")]
+pub enum IdeaLifecycle {
+    #[sea_orm(string_value = "not_started")]
+    NotStarted,
+    #[sea_orm(string_value = "ongoing")]
+    Ongoing,
+    #[sea_orm(string_value = "finished")]
+    Finished,
+}
+
+impl Default for IdeaLifecycle {
+    fn default() -> Self {
+        Self::NotStarted
+    }
+}
+
+impl std::fmt::Display for IdeaLifecycle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotStarted => write!(f, "not_started"),
+            Self::Ongoing => write!(f, "ongoing"),
+            Self::Finished => write!(f, "finished"),
+        }
+    }
+}
+
+impl IdeaLifecycle {
+    pub fn from_str_opt(s: &str) -> Option<Self> {
+        match s {
+            "not_started" => Some(Self::NotStarted),
+            "ongoing" => Some(Self::Ongoing),
+            "finished" => Some(Self::Finished),
+            _ => None,
+        }
+    }
+}
+
 /// PostgreSQL enum: idea_openness
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "idea_openness")]
@@ -381,6 +420,8 @@ pub enum NotificationKind {
     Mention,
     #[sea_orm(string_value = "nda_signed")]
     NdaSigned,
+    #[sea_orm(string_value = "message")]
+    Message,
 }
 
 impl std::fmt::Display for NotificationKind {
@@ -396,6 +437,7 @@ impl std::fmt::Display for NotificationKind {
             Self::BotAnalysis => write!(f, "bot_analysis"),
             Self::Mention => write!(f, "mention"),
             Self::NdaSigned => write!(f, "nda_signed"),
+            Self::Message => write!(f, "message"),
         }
     }
 }
@@ -413,6 +455,7 @@ impl NotificationKind {
             "bot_analysis" => Some(Self::BotAnalysis),
             "mention" => Some(Self::Mention),
             "nda_signed" => Some(Self::NdaSigned),
+            "message" => Some(Self::Message),
             _ => None,
         }
     }
