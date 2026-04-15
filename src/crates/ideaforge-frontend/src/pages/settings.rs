@@ -122,7 +122,11 @@ fn SettingsContent() -> impl IntoView {
                 } else {
                     Some(availability)
                 },
-                role: if role_val.is_empty() { None } else { Some(role_val) },
+                role: if role_val.is_empty() {
+                    None
+                } else {
+                    Some(role_val)
+                },
                 locations: Some(locations_input),
                 education_level: Some(if education.trim().is_empty() {
                     None

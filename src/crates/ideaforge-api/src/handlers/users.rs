@@ -308,12 +308,8 @@ async fn update_me(
             }
             Some(role) => Some(role),
             None => {
-                return err(
-                    StatusCode::BAD_REQUEST,
-                    "VALIDATION_ERROR",
-                    "Unknown role",
-                )
-                .into_response();
+                return err(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", "Unknown role")
+                    .into_response();
             }
         }
     } else {
@@ -853,7 +849,11 @@ async fn render_idea_list(
             )
         })
         .collect();
-    let total_pages = if total == 0 { 0 } else { total.div_ceil(per_page) };
+    let total_pages = if total == 0 {
+        0
+    } else {
+        total.div_ceil(per_page)
+    };
     Json(crate::handlers::ideas::IdeaListResponse {
         data,
         meta: crate::handlers::ideas::PaginationMeta {
