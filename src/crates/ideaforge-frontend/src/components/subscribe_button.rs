@@ -49,7 +49,17 @@ pub fn SubscribeButton(idea_id: String) -> impl IntoView {
             };
             if let Err(e) = result {
                 subscribed.set(was_subscribed); // revert
-                error.set(e.message);
+                if e.status == 401 {
+                    // The api client already tried a refresh; if we still get
+                    // 401 the session is truly dead. Clear it and send them
+                    // to /login instead of surfacing "invalid or expired token".
+                    auth.logout();
+                    if let Some(window) = web_sys::window() {
+                        let _ = window.location().set_href("/login");
+                    }
+                } else {
+                    error.set(e.message);
+                }
             }
             loading.set(false);
         });
