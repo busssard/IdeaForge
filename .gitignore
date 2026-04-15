@@ -31,3 +31,6 @@ Thumbs.db
 
 # Trunk build output
 dist/
+
+# Local planning / scratch notes (not committed)
+planning/
