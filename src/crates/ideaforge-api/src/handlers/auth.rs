@@ -134,7 +134,8 @@ async fn register(
     let email = match validate_email(&body.email) {
         Ok(e) => e,
         Err(msg) => {
-            return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response();
+            return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg)
+                .into_response();
         }
     };
     if let Err(msg) = validate_password(&body.password) {
@@ -143,13 +144,15 @@ async fn register(
     let display_name = match validate_display_name(&body.display_name) {
         Ok(n) => n,
         Err(msg) => {
-            return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response();
+            return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg)
+                .into_response();
         }
     };
     let role = match validate_role(body.role.as_deref()) {
         Ok(r) => r,
         Err(msg) => {
-            return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response();
+            return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg)
+                .into_response();
         }
     };
 
@@ -224,7 +227,8 @@ async fn login(State(state): State<AppState>, Json(body): Json<LoginRequest>) ->
     let email = match validate_email(&body.email) {
         Ok(e) => e,
         Err(msg) => {
-            return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response();
+            return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg)
+                .into_response();
         }
     };
 

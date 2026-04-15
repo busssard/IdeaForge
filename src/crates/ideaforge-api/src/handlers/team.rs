@@ -366,7 +366,8 @@ async fn review_application(
             .into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Application not found").into_response();
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Application not found")
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find application: {e}");
