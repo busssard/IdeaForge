@@ -72,7 +72,10 @@ pub fn render(markdown: &str) -> String {
 
     // External links open in a new tab — avoids dropping the user out of
     // the app.
-    html = html.replace("<a href=\"http", "<a target=\"_blank\" rel=\"noopener noreferrer\" href=\"http");
+    html = html.replace(
+        "<a href=\"http",
+        "<a target=\"_blank\" rel=\"noopener noreferrer\" href=\"http",
+    );
 
     html
 }

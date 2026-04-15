@@ -10,9 +10,7 @@ impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
             .get_connection()
-            .execute_unprepared(
-                "ALTER TYPE notification_kind ADD VALUE IF NOT EXISTS 'message'",
-            )
+            .execute_unprepared("ALTER TYPE notification_kind ADD VALUE IF NOT EXISTS 'message'")
             .await?;
         Ok(())
     }

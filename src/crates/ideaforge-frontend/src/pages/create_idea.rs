@@ -35,26 +35,41 @@ fn CreateIdeaForm() -> impl IntoView {
             return;
         }
 
-        let title = title_ref.get().map(|el| {
-            let el: &HtmlInputElement = &el;
-            el.value()
-        }).unwrap_or_default();
-        let summary = summary_ref.get().map(|el| {
-            let el: &HtmlTextAreaElement = &el;
-            el.value()
-        }).unwrap_or_default();
-        let description = description_ref.get().map(|el| {
-            let el: &HtmlTextAreaElement = &el;
-            el.value()
-        }).unwrap_or_default();
-        let openness = openness_ref.get().map(|el| {
-            let el: &HtmlSelectElement = &el;
-            el.value()
-        }).unwrap_or_default();
-        let category_id = category_ref.get().map(|el| {
-            let el: &HtmlSelectElement = &el;
-            el.value()
-        }).unwrap_or_default();
+        let title = title_ref
+            .get()
+            .map(|el| {
+                let el: &HtmlInputElement = &el;
+                el.value()
+            })
+            .unwrap_or_default();
+        let summary = summary_ref
+            .get()
+            .map(|el| {
+                let el: &HtmlTextAreaElement = &el;
+                el.value()
+            })
+            .unwrap_or_default();
+        let description = description_ref
+            .get()
+            .map(|el| {
+                let el: &HtmlTextAreaElement = &el;
+                el.value()
+            })
+            .unwrap_or_default();
+        let openness = openness_ref
+            .get()
+            .map(|el| {
+                let el: &HtmlSelectElement = &el;
+                el.value()
+            })
+            .unwrap_or_default();
+        let category_id = category_ref
+            .get()
+            .map(|el| {
+                let el: &HtmlSelectElement = &el;
+                el.value()
+            })
+            .unwrap_or_default();
 
         if title.is_empty() || summary.is_empty() || description.is_empty() {
             error.set("Title, summary, and description are required".into());
@@ -68,8 +83,16 @@ fn CreateIdeaForm() -> impl IntoView {
             title,
             summary,
             description,
-            openness: if openness.is_empty() { None } else { Some(openness) },
-            category_id: if category_id.is_empty() { None } else { Some(category_id) },
+            openness: if openness.is_empty() {
+                None
+            } else {
+                Some(openness)
+            },
+            category_id: if category_id.is_empty() {
+                None
+            } else {
+                Some(category_id)
+            },
         };
 
         wasm_bindgen_futures::spawn_local(async move {

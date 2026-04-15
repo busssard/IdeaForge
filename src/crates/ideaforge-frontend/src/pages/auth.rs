@@ -22,14 +22,20 @@ pub fn LoginPage() -> impl IntoView {
             return;
         }
 
-        let email = email_ref.get().map(|el| {
-            let el: &HtmlInputElement = &el;
-            el.value()
-        }).unwrap_or_default();
-        let password = password_ref.get().map(|el| {
-            let el: &HtmlInputElement = &el;
-            el.value()
-        }).unwrap_or_default();
+        let email = email_ref
+            .get()
+            .map(|el| {
+                let el: &HtmlInputElement = &el;
+                el.value()
+            })
+            .unwrap_or_default();
+        let password = password_ref
+            .get()
+            .map(|el| {
+                let el: &HtmlInputElement = &el;
+                el.value()
+            })
+            .unwrap_or_default();
 
         if email.is_empty() || password.is_empty() {
             error.set("Email and password are required".into());
@@ -130,22 +136,34 @@ pub fn RegisterPage() -> impl IntoView {
             return;
         }
 
-        let email = email_ref.get().map(|el| {
-            let el: &HtmlInputElement = &el;
-            el.value()
-        }).unwrap_or_default();
-        let password = password_ref.get().map(|el| {
-            let el: &HtmlInputElement = &el;
-            el.value()
-        }).unwrap_or_default();
-        let display_name = name_ref.get().map(|el| {
-            let el: &HtmlInputElement = &el;
-            el.value()
-        }).unwrap_or_default();
-        let role = role_ref.get().map(|el| {
-            let el: &web_sys::HtmlSelectElement = &el;
-            el.value()
-        }).unwrap_or_default();
+        let email = email_ref
+            .get()
+            .map(|el| {
+                let el: &HtmlInputElement = &el;
+                el.value()
+            })
+            .unwrap_or_default();
+        let password = password_ref
+            .get()
+            .map(|el| {
+                let el: &HtmlInputElement = &el;
+                el.value()
+            })
+            .unwrap_or_default();
+        let display_name = name_ref
+            .get()
+            .map(|el| {
+                let el: &HtmlInputElement = &el;
+                el.value()
+            })
+            .unwrap_or_default();
+        let role = role_ref
+            .get()
+            .map(|el| {
+                let el: &web_sys::HtmlSelectElement = &el;
+                el.value()
+            })
+            .unwrap_or_default();
 
         if email.is_empty() || password.is_empty() || display_name.is_empty() {
             error.set("All fields are required".into());

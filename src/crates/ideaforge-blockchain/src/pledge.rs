@@ -158,10 +158,7 @@ impl PledgeService {
     ///
     /// The `signed_tx_cbor` should be the raw CBOR bytes of the transaction
     /// after the user has signed it with their CIP-30 wallet.
-    pub async fn submit_signed_pledge(
-        &self,
-        signed_tx_cbor: &[u8],
-    ) -> Result<TxHash, PledgeError> {
+    pub async fn submit_signed_pledge(&self, signed_tx_cbor: &[u8]) -> Result<TxHash, PledgeError> {
         debug!(
             tx_size = signed_tx_cbor.len(),
             "Submitting signed pledge transaction"
@@ -200,7 +197,7 @@ impl PledgeService {
         // Note: idea_id, creator_address, and deadline would normally be extracted from
         // the datum of the UTxOs. For now we return what we can determine from the UTxOs.
         Ok(PledgeCampaign {
-            idea_id: Uuid::nil(), // Would be extracted from datum
+            idea_id: Uuid::nil(),                           // Would be extracted from datum
             creator_address: CardanoAddress(String::new()), // Would be extracted from datum
             script_address: CardanoAddress(script_address.to_string()),
             min_target_lovelace: min_target,
@@ -211,10 +208,7 @@ impl PledgeService {
     }
 
     /// Check the confirmation status of a transaction.
-    pub async fn check_tx_confirmation(
-        &self,
-        tx_hash: &str,
-    ) -> Result<TxStatus, PledgeError> {
+    pub async fn check_tx_confirmation(&self, tx_hash: &str) -> Result<TxStatus, PledgeError> {
         debug!(tx_hash, "Checking transaction confirmation");
 
         let status = self.blockfrost.get_tx_status(tx_hash).await?;
@@ -226,9 +220,7 @@ impl PledgeService {
             } => {
                 info!(
                     tx_hash,
-                    block_height,
-                    block_hash,
-                    "Transaction confirmed on-chain"
+                    block_height, block_hash, "Transaction confirmed on-chain"
                 );
             }
             TxStatus::Pending => {

@@ -21,9 +21,7 @@ fn NotificationsContent() -> impl IntoView {
 
     let notifications = LocalResource::new(move || {
         let _ = refresh_trigger.get(); // track changes
-        async move {
-            api::notifications::list_notifications(1, 50, false).await
-        }
+        async move { api::notifications::list_notifications(1, 50, false).await }
     });
 
     let mark_all = move |_: web_sys::MouseEvent| {

@@ -4,11 +4,11 @@
 //! plus a kanban-style board view grouped by status columns.
 
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, put},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -208,7 +208,7 @@ async fn get_board(
     match idea_repo.find_by_id(id).await {
         Ok(Some(_)) => {}
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");
@@ -326,7 +326,7 @@ async fn create_task(
                 "FORBIDDEN",
                 "Only the idea author or team members can create tasks",
             )
-            .into_response()
+            .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to check permissions: {e}");
@@ -392,7 +392,7 @@ async fn create_task(
                     "VALIDATION_ERROR",
                     "Assignee must be a team member or the idea author",
                 )
-                .into_response()
+                .into_response();
             }
             Err(e) => {
                 tracing::error!("Failed to verify assignee: {e}");
@@ -474,14 +474,12 @@ async fn get_task(
     let task_repo = BoardTaskRepository::new(state.db.connection());
     match task_repo.find_by_id(path.task_id).await {
         Ok(Some(task)) if task.idea_id == path.id => Json(task_response(&task)).into_response(),
-        Ok(Some(_)) => {
-            err(
-                StatusCode::NOT_FOUND,
-                "NOT_FOUND",
-                "Task not found for this idea",
-            )
-            .into_response()
-        }
+        Ok(Some(_)) => err(
+            StatusCode::NOT_FOUND,
+            "NOT_FOUND",
+            "Task not found for this idea",
+        )
+        .into_response(),
         Ok(None) => err(StatusCode::NOT_FOUND, "NOT_FOUND", "Task not found").into_response(),
         Err(e) => {
             tracing::error!("Failed to get task: {e}");
@@ -510,7 +508,7 @@ async fn update_task(
                 "FORBIDDEN",
                 "Only the idea author or team members can update tasks",
             )
-            .into_response()
+            .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to check permissions: {e}");
@@ -533,10 +531,10 @@ async fn update_task(
                 "NOT_FOUND",
                 "Task not found for this idea",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Task not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Task not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find task: {e}");
@@ -590,7 +588,7 @@ async fn update_task(
                         "VALIDATION_ERROR",
                         "Assignee must be a team member or the idea author",
                     )
-                    .into_response()
+                    .into_response();
                 }
                 Err(e) => {
                     tracing::error!("Failed to verify assignee: {e}");
@@ -623,16 +621,10 @@ async fn update_task(
     };
 
     // Build skill_tags
-    let skill_tags = body
-        .skill_tags
-        .as_ref()
-        .map(|tags| serde_json::json!(tags));
+    let skill_tags = body.skill_tags.as_ref().map(|tags| serde_json::json!(tags));
 
     // Build description update: only pass through if the field was present in the request
-    let description: Option<Option<&str>> = body
-        .description
-        .as_ref()
-        .map(|d| Some(d.as_str()));
+    let description: Option<Option<&str>> = body.description.as_ref().map(|d| Some(d.as_str()));
 
     match task_repo
         .update(
@@ -677,7 +669,7 @@ async fn update_task_status(
                 "FORBIDDEN",
                 "Only the idea author or team members can update task status",
             )
-            .into_response()
+            .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to check permissions: {e}");
@@ -713,10 +705,10 @@ async fn update_task_status(
                 "NOT_FOUND",
                 "Task not found for this idea",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Task not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Task not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find task: {e}");
@@ -758,10 +750,10 @@ async fn delete_task(
                 "NOT_FOUND",
                 "Task not found for this idea",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Task not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Task not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find task: {e}");

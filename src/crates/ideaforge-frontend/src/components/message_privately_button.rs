@@ -28,11 +28,7 @@ pub fn MessagePrivatelyButton(target_user_id: String) -> impl IntoView {
 
     let is_self = {
         let target_inner = target.get_value();
-        move || {
-            auth.user
-                .get()
-                .map_or(false, |u| u.id == target_inner)
-        }
+        move || auth.user.get().map_or(false, |u| u.id == target_inner)
     };
 
     let on_click = move |_: web_sys::MouseEvent| {
@@ -58,11 +54,7 @@ pub fn MessagePrivatelyButton(target_user_id: String) -> impl IntoView {
         error.set(String::new());
 
         let target_user = target.get_value();
-        let me = auth
-            .user
-            .get_untracked()
-            .map(|u| u.id)
-            .unwrap_or_default();
+        let me = auth.user.get_untracked().map(|u| u.id).unwrap_or_default();
         let navigate_fn = navigate.get_value();
 
         wasm_bindgen_futures::spawn_local(async move {
@@ -73,7 +65,9 @@ pub fn MessagePrivatelyButton(target_user_id: String) -> impl IntoView {
                 let existing = groups.data.iter().find(|g| {
                     let ids: std::collections::HashSet<&str> =
                         g.members.iter().map(|m| m.user_id.as_str()).collect();
-                    ids.len() == 2 && ids.contains(me.as_str()) && ids.contains(target_user.as_str())
+                    ids.len() == 2
+                        && ids.contains(me.as_str())
+                        && ids.contains(target_user.as_str())
                 });
                 if let Some(g) = existing {
                     mls.pending_selection.set(Some(g.id.clone()));
@@ -88,9 +82,7 @@ pub fn MessagePrivatelyButton(target_user_id: String) -> impl IntoView {
                 Ok(bytes) => bytes,
                 Err(e) => {
                     if e.status == 404 {
-                        error.set(
-                            "That user hasn't set up private messaging yet.".into(),
-                        );
+                        error.set("That user hasn't set up private messaging yet.".into());
                     } else {
                         error.set(format!("Couldn't start chat: {}", e.message));
                     }
@@ -135,14 +127,16 @@ pub fn MessagePrivatelyButton(target_user_id: String) -> impl IntoView {
                         if let Ok(snap) = snapshot {
                             if let Ok(pt) = serde_json::to_vec(&snap) {
                                 if let Ok(wrapped) = crate::mls::crypto::seal(&keys.wrap_key, &pt) {
-                                    use base64::{engine::general_purpose::STANDARD, Engine};
+                                    use base64::{Engine, engine::general_purpose::STANDARD};
                                     let body = serde_json::json!({
                                         "verifier_b64": STANDARD.encode(keys.verifier),
                                         "wrapped_blob_b64": STANDARD.encode(wrapped),
                                     });
-                                    let _ = crate::api::client::put::<serde_json::Value, serde_json::Value>(
-                                        "/api/v1/mls/keystore",
-                                        &body,
+                                    let _ = crate::api::client::put::<
+                                        serde_json::Value,
+                                        serde_json::Value,
+                                    >(
+                                        "/api/v1/mls/keystore", &body
                                     )
                                     .await;
                                 }

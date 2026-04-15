@@ -5,9 +5,9 @@
 //! server never sees the original 10MP phone photo.
 
 use leptos::prelude::*;
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use wasm_bindgen_futures::{spawn_local, JsFuture};
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::{JsFuture, spawn_local};
 use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement};
 
 const STAGE_SIZE: f64 = 320.0;
@@ -23,9 +23,8 @@ pub fn AvatarCropper(
 ) -> impl IntoView {
     // Object URL points at the user-selected File. Kept in a StoredValue so we
     // can revoke it when the component unmounts.
-    let object_url = StoredValue::new(
-        web_sys::Url::create_object_url_with_blob(&file).unwrap_or_default(),
-    );
+    let object_url =
+        StoredValue::new(web_sys::Url::create_object_url_with_blob(&file).unwrap_or_default());
 
     let tx = RwSignal::new(0.0_f64);
     let ty = RwSignal::new(0.0_f64);
@@ -92,7 +91,13 @@ pub fn AvatarCropper(
         let (sx, sy) = drag_start_offset.get_untracked();
         let new_tx = sx + (ev.client_x() as f64 - from_x);
         let new_ty = sy + (ev.client_y() as f64 - from_y);
-        let (cx, cy) = clamp_pan(new_tx, new_ty, zoom.get_untracked(), nat_w.get_untracked(), nat_h.get_untracked());
+        let (cx, cy) = clamp_pan(
+            new_tx,
+            new_ty,
+            zoom.get_untracked(),
+            nat_w.get_untracked(),
+            nat_h.get_untracked(),
+        );
         tx.set(cx);
         ty.set(cy);
     };
@@ -158,9 +163,12 @@ pub fn AvatarCropper(
         };
         canvas.set_width(OUTPUT_SIZE);
         canvas.set_height(OUTPUT_SIZE);
-        let ctx = match canvas.get_context("2d").ok().flatten().and_then(|c| {
-            c.dyn_into::<CanvasRenderingContext2d>().ok()
-        }) {
+        let ctx = match canvas
+            .get_context("2d")
+            .ok()
+            .flatten()
+            .and_then(|c| c.dyn_into::<CanvasRenderingContext2d>().ok())
+        {
             Some(c) => c,
             None => {
                 error.set("Couldn't get 2D context.".into());
@@ -292,7 +300,8 @@ async fn canvas_to_jpeg_blob(canvas: &HtmlCanvasElement) -> Result<Blob, JsValue
         let reject_clone = reject.clone();
         let cb = Closure::once_into_js(move |blob: JsValue| {
             if blob.is_null() || blob.is_undefined() {
-                let _ = reject_clone.call1(&JsValue::NULL, &JsValue::from_str("toBlob returned null"));
+                let _ =
+                    reject_clone.call1(&JsValue::NULL, &JsValue::from_str("toBlob returned null"));
             } else {
                 let _ = resolve.call1(&JsValue::NULL, &blob);
             }

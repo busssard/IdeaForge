@@ -11,9 +11,7 @@ pub fn BotSection(idea_id: String) -> impl IntoView {
     let _ = idea_id; // reserved for future per-idea bot filtering
     let collapsed = RwSignal::new(true);
 
-    let bots = LocalResource::new(move || async move {
-        api::bots::list_bots().await
-    });
+    let bots = LocalResource::new(move || async move { api::bots::list_bots().await });
 
     view! {
         <div class="bot-section">

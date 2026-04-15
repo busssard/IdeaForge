@@ -60,10 +60,7 @@ impl UserRole {
                 "team.apply",
                 "board.tasks.claim",
             ],
-            Self::Curious => &[
-                "stokes.create",
-                "contributions.create",
-            ],
+            Self::Curious => &["stokes.create", "contributions.create"],
         }
     }
 }

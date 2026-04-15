@@ -22,14 +22,46 @@ async fn seed_categories(db: &DatabaseConnection) -> Result<(), sea_orm::DbErr> 
     let repo = CategoryRepository::new(db);
 
     let categories = [
-        ("Technology", "technology", "Software, hardware, AI, and digital innovation"),
-        ("Science", "science", "Research, discoveries, and scientific breakthroughs"),
-        ("Art & Design", "art-design", "Visual arts, music, film, and creative expression"),
-        ("Social Impact", "social-impact", "Community, sustainability, and social change"),
-        ("Business", "business", "Startups, commerce, and entrepreneurship"),
-        ("Education", "education", "Learning, teaching, and knowledge sharing"),
-        ("Health", "health", "Wellness, medicine, and healthcare innovation"),
-        ("Environment", "environment", "Climate, conservation, and green technology"),
+        (
+            "Technology",
+            "technology",
+            "Software, hardware, AI, and digital innovation",
+        ),
+        (
+            "Science",
+            "science",
+            "Research, discoveries, and scientific breakthroughs",
+        ),
+        (
+            "Art & Design",
+            "art-design",
+            "Visual arts, music, film, and creative expression",
+        ),
+        (
+            "Social Impact",
+            "social-impact",
+            "Community, sustainability, and social change",
+        ),
+        (
+            "Business",
+            "business",
+            "Startups, commerce, and entrepreneurship",
+        ),
+        (
+            "Education",
+            "education",
+            "Learning, teaching, and knowledge sharing",
+        ),
+        (
+            "Health",
+            "health",
+            "Wellness, medicine, and healthcare innovation",
+        ),
+        (
+            "Environment",
+            "environment",
+            "Climate, conservation, and green technology",
+        ),
     ];
 
     for (i, (name, slug, desc)) in categories.iter().enumerate() {
@@ -44,11 +76,15 @@ async fn seed_categories(db: &DatabaseConnection) -> Result<(), sea_orm::DbErr> 
 async fn seed_users(db: &DatabaseConnection) -> Result<Vec<SeededUser>, sea_orm::DbErr> {
     let repo = UserRepository::new(db);
 
-    let password_hash = ideaforge_auth::password::hash_password("Test1234!")
-        .expect("Failed to hash seed password");
+    let password_hash =
+        ideaforge_auth::password::hash_password("Test1234!").expect("Failed to hash seed password");
 
     let users_data = [
-        ("alice@example.com", "Alice Entrepreneur", UserRole::Entrepreneur),
+        (
+            "alice@example.com",
+            "Alice Entrepreneur",
+            UserRole::Entrepreneur,
+        ),
         ("bob@example.com", "Bob Maker", UserRole::Maker),
     ];
 
@@ -60,7 +96,8 @@ async fn seed_users(db: &DatabaseConnection) -> Result<Vec<SeededUser>, sea_orm:
             continue;
         }
         let id = Uuid::new_v4();
-        repo.create(id, email, &password_hash, name, role.clone()).await?;
+        repo.create(id, email, &password_hash, name, role.clone())
+            .await?;
         users.push(SeededUser { id });
     }
 
@@ -104,7 +141,9 @@ async fn seed_ideas(db: &DatabaseConnection, users: &[SeededUser]) -> Result<(),
     ];
 
     for (user_idx, title, summary, description, openness, cat_id) in &ideas {
-        let (existing, _) = repo.list(None, None, None, None, false, None, None, 1, 100).await?;
+        let (existing, _) = repo
+            .list(None, None, None, None, false, None, None, 1, 100)
+            .await?;
         if existing.iter().any(|i| i.title == *title) {
             tracing::debug!("Idea '{title}' already exists, skipping");
             continue;

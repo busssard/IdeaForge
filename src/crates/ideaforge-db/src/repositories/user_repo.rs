@@ -185,26 +185,21 @@ impl<'a> UserRepository<'a> {
         if let Some(skill_list) = skills {
             if !skill_list.is_empty() {
                 // Build JSONB array literal for containment check
-                let skills_json = serde_json::to_string(&skill_list).unwrap_or_else(|_| "[]".to_string());
-                query = query.filter(
-                    Expr::cust_with_values(
-                        "skills @> ?::jsonb",
-                        [skills_json]
-                    )
-                );
+                let skills_json =
+                    serde_json::to_string(&skill_list).unwrap_or_else(|_| "[]".to_string());
+                query = query.filter(Expr::cust_with_values("skills @> ?::jsonb", [skills_json]));
             }
         }
 
         // Aggregate sorts use scalar subqueries against ideas / stokes — can't
         // be expressed in SeaORM's fluent API, so we drop down to Expr::cust.
         let ideas_subq = Expr::cust(
-            "(SELECT COUNT(*) FROM ideas i WHERE i.author_id = users.id AND i.archived_at IS NULL)"
+            "(SELECT COUNT(*) FROM ideas i WHERE i.author_id = users.id AND i.archived_at IS NULL)",
         );
-        let stokes_subq =
-            Expr::cust("(SELECT COUNT(*) FROM stokes s WHERE s.user_id = users.id)");
+        let stokes_subq = Expr::cust("(SELECT COUNT(*) FROM stokes s WHERE s.user_id = users.id)");
         let activity_subq = Expr::cust(
             "((SELECT COUNT(*) FROM ideas i WHERE i.author_id = users.id AND i.archived_at IS NULL) + \
-             (SELECT COUNT(*) FROM stokes s WHERE s.user_id = users.id))"
+             (SELECT COUNT(*) FROM stokes s WHERE s.user_id = users.id))",
         );
 
         query = match sort {
@@ -223,11 +218,7 @@ impl<'a> UserRepository<'a> {
 
         // Paginate
         let offset = (page.saturating_sub(1)) * per_page;
-        let users = query
-            .offset(offset)
-            .limit(per_page)
-            .all(self.db)
-            .await?;
+        let users = query.offset(offset).limit(per_page).all(self.db).await?;
 
         // Fetch stats for each user
         let mut results = Vec::with_capacity(users.len());

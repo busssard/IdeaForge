@@ -71,7 +71,11 @@ pub fn StokeButton(
         });
     };
 
-    let base_class = if prominent { "stoke-btn stoke-btn-prominent" } else { "stoke-btn" };
+    let base_class = if prominent {
+        "stoke-btn stoke-btn-prominent"
+    } else {
+        "stoke-btn"
+    };
 
     view! {
         <button

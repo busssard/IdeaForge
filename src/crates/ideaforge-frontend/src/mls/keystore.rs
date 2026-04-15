@@ -5,7 +5,7 @@
 //! only the per-user salt, a verifier bytestring, and the opaque wrapped
 //! blob.
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::{Deserialize, Serialize};
 
 use crate::api::client::{self, ApiError};
@@ -110,8 +110,7 @@ pub async fn unlock(pin: &str) -> Result<(MlsClient, DerivedKeys), ApiError> {
             message: e.to_string(),
         })?;
     let plaintext = crypto::open(&keys.wrap_key, &wrapped).map_err(crypto_to_api)?;
-    let serialized: SerializedClient =
-        serde_json::from_slice(&plaintext).map_err(serde_to_api)?;
+    let serialized: SerializedClient = serde_json::from_slice(&plaintext).map_err(serde_to_api)?;
     let mls_client = MlsClient::restore(serialized).map_err(client_to_api)?;
 
     Ok((mls_client, keys))

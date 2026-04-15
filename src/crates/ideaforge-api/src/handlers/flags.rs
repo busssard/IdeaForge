@@ -1,9 +1,9 @@
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, put},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -146,7 +146,13 @@ async fn create_flag(
 
     let repo = FlagRepository::new(state.db.connection());
     match repo
-        .create(Uuid::new_v4(), auth.user_id, target_type, body.target_id, reason)
+        .create(
+            Uuid::new_v4(),
+            auth.user_id,
+            target_type,
+            body.target_id,
+            reason,
+        )
         .await
     {
         Ok(flag) => (StatusCode::CREATED, Json(flag_response(&flag))).into_response(),
@@ -180,7 +186,11 @@ async fn list_pending_flags(
     let repo = FlagRepository::new(state.db.connection());
     match repo.list_pending(page, per_page).await {
         Ok((flags, total)) => {
-            let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
+            let total_pages = if total == 0 {
+                0
+            } else {
+                (total + per_page - 1) / per_page
+            };
             Json(FlagListResponse {
                 data: flags.iter().map(flag_response).collect(),
                 meta: PaginationMeta {
@@ -243,7 +253,7 @@ async fn review_flag(
     // Verify flag exists
     match repo.find_by_id(id).await {
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Flag not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Flag not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find flag: {e}");

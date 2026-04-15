@@ -20,11 +20,7 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::idea::Entity")]
     Ideas,
-    #[sea_orm(
-        belongs_to = "Entity",
-        from = "Column::ParentId",
-        to = "Column::Id"
-    )]
+    #[sea_orm(belongs_to = "Entity", from = "Column::ParentId", to = "Column::Id")]
     Parent,
 }
 

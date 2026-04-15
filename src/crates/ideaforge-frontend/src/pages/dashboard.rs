@@ -37,9 +37,8 @@ fn DashboardContent() -> impl IntoView {
     });
 
     // Load my stoked ideas
-    let my_stokes = LocalResource::new(move || async move {
-        api::ideas::list_my_stoked_ideas(1, 20).await
-    });
+    let my_stokes =
+        LocalResource::new(move || async move { api::ideas::list_my_stoked_ideas(1, 20).await });
 
     // Derive counts from loaded data
     let my_ideas_count = Signal::derive(move || {

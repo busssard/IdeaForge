@@ -7,11 +7,11 @@
 //! See `docs/architecture/simplex_messaging_spike.md` §§13–15 for the design.
 
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get, post},
-    Json, Router,
 };
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, Set,
@@ -23,8 +23,8 @@ use uuid::Uuid;
 use crate::extractors::AuthUser;
 use crate::state::AppState;
 use ideaforge_db::entities::{
-    enums::NotificationKind, mls_group, mls_group_member, mls_keypackage, mls_message,
-    mls_welcome, notification, user,
+    enums::NotificationKind, mls_group, mls_group_member, mls_keypackage, mls_message, mls_welcome,
+    notification, user,
 };
 
 // ---- Routes ----------------------------------------------------------------
@@ -33,12 +33,17 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route(
             "/keypackages",
-            post(publish_keypackages).get(list_my_keypackages).delete(purge_my_keypackages),
+            post(publish_keypackages)
+                .get(list_my_keypackages)
+                .delete(purge_my_keypackages),
         )
         .route("/keypackages/:user_id/consume", post(consume_keypackage))
         .route("/groups", post(create_group).get(list_my_groups))
         .route("/groups/:id/members", post(add_members))
-        .route("/groups/:id/messages", post(post_message).get(list_messages))
+        .route(
+            "/groups/:id/messages",
+            post(post_message).get(list_messages),
+        )
         .route("/groups/:id", delete(leave_group))
         .route("/welcomes", get(list_welcomes))
         .route("/welcomes/:id", delete(ack_welcome))
@@ -49,12 +54,12 @@ pub fn routes() -> Router<AppState> {
 /// Bytes are shipped as base64 strings over the JSON wire. The server never
 /// interprets them — they're opaque to us.
 fn encode_bytes(b: &[u8]) -> String {
-    use base64::{engine::general_purpose::STANDARD, Engine};
+    use base64::{Engine, engine::general_purpose::STANDARD};
     STANDARD.encode(b)
 }
 
 fn decode_bytes(s: &str) -> Result<Vec<u8>, (StatusCode, Json<serde_json::Value>)> {
-    use base64::{engine::general_purpose::STANDARD, Engine};
+    use base64::{Engine, engine::general_purpose::STANDARD};
     STANDARD.decode(s).map_err(|_| {
         (
             StatusCode::BAD_REQUEST,
@@ -247,10 +252,7 @@ async fn publish_keypackages(
 /// Delete every unconsumed KeyPackage belonging to the authenticated user.
 /// Used for key rotation (client generates fresh ones and purges the old
 /// batch) and for test-state hygiene. Consumed KeyPackages are kept for audit.
-async fn purge_my_keypackages(
-    State(state): State<AppState>,
-    auth: AuthUser,
-) -> impl IntoResponse {
+async fn purge_my_keypackages(State(state): State<AppState>, auth: AuthUser) -> impl IntoResponse {
     let db = state.db.connection();
     match mls_keypackage::Entity::delete_many()
         .filter(mls_keypackage::Column::UserId.eq(auth.user_id))
@@ -275,10 +277,7 @@ async fn purge_my_keypackages(
     }
 }
 
-async fn list_my_keypackages(
-    State(state): State<AppState>,
-    auth: AuthUser,
-) -> impl IntoResponse {
+async fn list_my_keypackages(State(state): State<AppState>, auth: AuthUser) -> impl IntoResponse {
     let db = state.db.connection();
     match mls_keypackage::Entity::find()
         .filter(mls_keypackage::Column::UserId.eq(auth.user_id))
@@ -552,10 +551,7 @@ async fn create_group(
         .into_response()
 }
 
-async fn list_my_groups(
-    State(state): State<AppState>,
-    auth: AuthUser,
-) -> impl IntoResponse {
+async fn list_my_groups(State(state): State<AppState>, auth: AuthUser) -> impl IntoResponse {
     use ideaforge_db::entities::user;
 
     let db = state.db.connection();
@@ -619,8 +615,7 @@ async fn list_my_groups(
     };
 
     // Batch-fetch display names for every user referenced.
-    let user_ids: std::collections::HashSet<Uuid> =
-        all_members.iter().map(|m| m.user_id).collect();
+    let user_ids: std::collections::HashSet<Uuid> = all_members.iter().map(|m| m.user_id).collect();
     let users = if user_ids.is_empty() {
         Vec::new()
     } else {
@@ -641,10 +636,8 @@ async fn list_my_groups(
             }
         }
     };
-    let name_map: std::collections::HashMap<Uuid, String> = users
-        .into_iter()
-        .map(|u| (u.id, u.display_name))
-        .collect();
+    let name_map: std::collections::HashMap<Uuid, String> =
+        users.into_iter().map(|u| (u.id, u.display_name)).collect();
 
     // Group memberships by group_id so we can attach them per row.
     let mut members_by_group: std::collections::HashMap<Uuid, Vec<MemberSummary>> =
@@ -694,8 +687,12 @@ async fn add_members(
 
     let db = state.db.connection();
     if !is_group_member(db, group_id, auth.user_id).await {
-        return err(StatusCode::FORBIDDEN, "NOT_MEMBER", "Not a member of this group")
-            .into_response();
+        return err(
+            StatusCode::FORBIDDEN,
+            "NOT_MEMBER",
+            "Not a member of this group",
+        )
+        .into_response();
     }
 
     let commit_bytes = match decode_bytes(&body.commit_b64) {
@@ -873,8 +870,12 @@ async fn post_message(
 ) -> impl IntoResponse {
     let db = state.db.connection();
     if !is_group_member(db, group_id, auth.user_id).await {
-        return err(StatusCode::FORBIDDEN, "NOT_MEMBER", "Not a member of this group")
-            .into_response();
+        return err(
+            StatusCode::FORBIDDEN,
+            "NOT_MEMBER",
+            "Not a member of this group",
+        )
+        .into_response();
     }
 
     let ciphertext = match decode_bytes(&body.ciphertext_b64) {
@@ -922,7 +923,11 @@ async fn post_message(
                 )
                 .await;
             }
-            (StatusCode::CREATED, Json(serde_json::json!({ "id": inserted.id }))).into_response()
+            (
+                StatusCode::CREATED,
+                Json(serde_json::json!({ "id": inserted.id })),
+            )
+                .into_response()
         }
         Err(e) => {
             tracing::error!("Message insert failed: {e}");
@@ -944,8 +949,12 @@ async fn list_messages(
 ) -> impl IntoResponse {
     let db = state.db.connection();
     if !is_group_member(db, group_id, auth.user_id).await {
-        return err(StatusCode::FORBIDDEN, "NOT_MEMBER", "Not a member of this group")
-            .into_response();
+        return err(
+            StatusCode::FORBIDDEN,
+            "NOT_MEMBER",
+            "Not a member of this group",
+        )
+        .into_response();
     }
 
     let limit = params.limit.unwrap_or(100).clamp(1, 500);
@@ -984,10 +993,7 @@ async fn list_messages(
 
 // ---- Welcome endpoints -----------------------------------------------------
 
-async fn list_welcomes(
-    State(state): State<AppState>,
-    auth: AuthUser,
-) -> impl IntoResponse {
+async fn list_welcomes(State(state): State<AppState>, auth: AuthUser) -> impl IntoResponse {
     let db = state.db.connection();
     match mls_welcome::Entity::find()
         .filter(mls_welcome::Column::RecipientUserId.eq(auth.user_id))
@@ -1030,8 +1036,7 @@ async fn ack_welcome(
     let welcome = match mls_welcome::Entity::find_by_id(id).one(db).await {
         Ok(Some(w)) => w,
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Welcome not found")
-                .into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Welcome not found").into_response();
         }
         Err(e) => {
             tracing::error!("Welcome lookup failed: {e}");
@@ -1054,23 +1059,14 @@ async fn ack_welcome(
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => {
             tracing::error!("Welcome ack failed: {e}");
-            err(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "DB_ERROR",
-                "Ack failed",
-            )
-            .into_response()
+            err(StatusCode::INTERNAL_SERVER_ERROR, "DB_ERROR", "Ack failed").into_response()
         }
     }
 }
 
 // ---- Helpers ---------------------------------------------------------------
 
-async fn is_group_member(
-    db: &sea_orm::DatabaseConnection,
-    group_id: Uuid,
-    user_id: Uuid,
-) -> bool {
+async fn is_group_member(db: &sea_orm::DatabaseConnection, group_id: Uuid, user_id: Uuid) -> bool {
     mls_group_member::Entity::find()
         .filter(mls_group_member::Column::GroupId.eq(group_id))
         .filter(mls_group_member::Column::UserId.eq(user_id))
@@ -1120,9 +1116,7 @@ async fn notify_recipients(
                 let new_count = row.count + 1;
                 let mut active: notification::ActiveModel = row.into();
                 active.count = Set(new_count);
-                active.title = Set(format!(
-                    "{new_count} new messages from {sender_name}"
-                ));
+                active.title = Set(format!("{new_count} new messages from {sender_name}"));
                 active.created_at = Set(now);
                 if let Err(e) = active.update(db).await {
                     tracing::warn!(
@@ -1144,9 +1138,7 @@ async fn notify_recipients(
                     count: Set(1),
                 };
                 if let Err(e) = note.insert(db).await {
-                    tracing::warn!(
-                        "message notification insert failed for {rid}: {e}"
-                    );
+                    tracing::warn!("message notification insert failed for {rid}: {e}");
                 }
             }
             Err(e) => {

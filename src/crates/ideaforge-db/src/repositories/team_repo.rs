@@ -1,9 +1,9 @@
 use sea_orm::*;
 use uuid::Uuid;
 
+use crate::entities::enums::{ApplicationStatus, TeamMemberRole};
 use crate::entities::team_application;
 use crate::entities::team_member;
-use crate::entities::enums::{ApplicationStatus, TeamMemberRole};
 
 // =============================================================================
 // TeamApplicationRepository
@@ -40,9 +40,7 @@ impl<'a> TeamApplicationRepository<'a> {
     }
 
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<team_application::Model>, DbErr> {
-        team_application::Entity::find_by_id(id)
-            .one(self.db)
-            .await
+        team_application::Entity::find_by_id(id).one(self.db).await
     }
 
     pub async fn list_for_idea(
@@ -52,8 +50,8 @@ impl<'a> TeamApplicationRepository<'a> {
         page: u64,
         per_page: u64,
     ) -> Result<(Vec<team_application::Model>, u64), DbErr> {
-        let mut query = team_application::Entity::find()
-            .filter(team_application::Column::IdeaId.eq(idea_id));
+        let mut query =
+            team_application::Entity::find().filter(team_application::Column::IdeaId.eq(idea_id));
 
         if let Some(s) = status {
             query = query.filter(team_application::Column::Status.eq(s));
@@ -73,10 +71,8 @@ impl<'a> TeamApplicationRepository<'a> {
             .filter(team_application::Column::UserId.eq(user_id))
             .filter(team_application::Column::IdeaId.eq(idea_id))
             .filter(
-                team_application::Column::Status.is_in([
-                    ApplicationStatus::Pending,
-                    ApplicationStatus::Accepted,
-                ]),
+                team_application::Column::Status
+                    .is_in([ApplicationStatus::Pending, ApplicationStatus::Accepted]),
             )
             .count(self.db)
             .await?;
@@ -133,10 +129,7 @@ impl<'a> TeamMemberRepository<'a> {
         model.insert(self.db).await
     }
 
-    pub async fn list_for_idea(
-        &self,
-        idea_id: Uuid,
-    ) -> Result<Vec<team_member::Model>, DbErr> {
+    pub async fn list_for_idea(&self, idea_id: Uuid) -> Result<Vec<team_member::Model>, DbErr> {
         team_member::Entity::find()
             .filter(team_member::Column::IdeaId.eq(idea_id))
             .order_by_asc(team_member::Column::JoinedAt)
@@ -153,11 +146,7 @@ impl<'a> TeamMemberRepository<'a> {
         Ok(count > 0)
     }
 
-    pub async fn remove(
-        &self,
-        idea_id: Uuid,
-        user_id: Uuid,
-    ) -> Result<DeleteResult, DbErr> {
+    pub async fn remove(&self, idea_id: Uuid, user_id: Uuid) -> Result<DeleteResult, DbErr> {
         team_member::Entity::delete_many()
             .filter(team_member::Column::IdeaId.eq(idea_id))
             .filter(team_member::Column::UserId.eq(user_id))

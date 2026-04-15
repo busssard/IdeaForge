@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use axum::{
     extract::FromRequestParts,
-    http::{header::AUTHORIZATION, request::Parts, StatusCode},
+    http::{StatusCode, header::AUTHORIZATION, request::Parts},
     response::{IntoResponse, Json, Response},
 };
 use serde_json::json;
@@ -48,9 +48,12 @@ impl FromRequestParts<crate::state::AppState> for AuthUser {
             message: "Missing or invalid Authorization header",
         })?;
 
-        let claims = state.jwt.validate_token(&token).map_err(|_| AuthRejection {
-            message: "Invalid or expired token",
-        })?;
+        let claims = state
+            .jwt
+            .validate_token(&token)
+            .map_err(|_| AuthRejection {
+                message: "Invalid or expired token",
+            })?;
 
         Ok(AuthUser {
             user_id: claims.sub,

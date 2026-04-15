@@ -80,11 +80,13 @@ pub async fn upload_avatar(blob: &web_sys::Blob) -> Result<AvatarUploadResponse,
         code: "BODY_READ".into(),
         message: format!("{:?}", e),
     })?;
-    let text_js = JsFuture::from(text_promise).await.map_err(|e| client::ApiError {
-        status,
-        code: "BODY_READ".into(),
-        message: format!("{:?}", e),
-    })?;
+    let text_js = JsFuture::from(text_promise)
+        .await
+        .map_err(|e| client::ApiError {
+            status,
+            code: "BODY_READ".into(),
+            message: format!("{:?}", e),
+        })?;
     let text = text_js.as_string().unwrap_or_default();
 
     if !resp.ok() {
@@ -94,12 +96,22 @@ pub async fn upload_avatar(blob: &web_sys::Blob) -> Result<AvatarUploadResponse,
             .and_then(|v| {
                 let err = v.get("error")?;
                 Some((
-                    err.get("code").and_then(|c| c.as_str()).unwrap_or("UNKNOWN").to_string(),
-                    err.get("message").and_then(|m| m.as_str()).unwrap_or(&text).to_string(),
+                    err.get("code")
+                        .and_then(|c| c.as_str())
+                        .unwrap_or("UNKNOWN")
+                        .to_string(),
+                    err.get("message")
+                        .and_then(|m| m.as_str())
+                        .unwrap_or(&text)
+                        .to_string(),
                 ))
             })
             .unwrap_or_else(|| ("UPLOAD_FAILED".into(), text.clone()));
-        return Err(client::ApiError { status, code, message });
+        return Err(client::ApiError {
+            status,
+            code,
+            message,
+        });
     }
 
     serde_json::from_str::<AvatarUploadResponse>(&text).map_err(|e| client::ApiError {

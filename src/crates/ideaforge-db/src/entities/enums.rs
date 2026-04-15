@@ -185,7 +185,10 @@ impl IdeaOpenness {
 
     /// Whether this idea should appear in public browse/search results.
     pub fn is_publicly_listed(&self) -> bool {
-        matches!(self, Self::Open | Self::Collaborative | Self::Commercial | Self::NdaProtected)
+        matches!(
+            self,
+            Self::Open | Self::Collaborative | Self::Commercial | Self::NdaProtected
+        )
     }
 }
 

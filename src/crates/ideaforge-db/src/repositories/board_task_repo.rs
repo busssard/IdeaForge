@@ -58,9 +58,7 @@ impl<'a> BoardTaskRepository<'a> {
 
     /// Find a task by ID.
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<board_task::Model>, DbErr> {
-        board_task::Entity::find_by_id(id)
-            .one(self.db)
-            .await
+        board_task::Entity::find_by_id(id).one(self.db).await
     }
 
     /// List tasks for an idea (paginated, with optional filters).
@@ -72,8 +70,7 @@ impl<'a> BoardTaskRepository<'a> {
         page: u64,
         per_page: u64,
     ) -> Result<(Vec<board_task::Model>, u64), DbErr> {
-        let mut query = board_task::Entity::find()
-            .filter(board_task::Column::IdeaId.eq(idea_id));
+        let mut query = board_task::Entity::find().filter(board_task::Column::IdeaId.eq(idea_id));
 
         if let Some(status) = status_filter {
             query = query.filter(board_task::Column::Status.eq(status));
@@ -95,10 +92,7 @@ impl<'a> BoardTaskRepository<'a> {
     }
 
     /// List all tasks for an idea (no pagination, for kanban view).
-    pub async fn list_all_for_idea(
-        &self,
-        idea_id: Uuid,
-    ) -> Result<Vec<board_task::Model>, DbErr> {
+    pub async fn list_all_for_idea(&self, idea_id: Uuid) -> Result<Vec<board_task::Model>, DbErr> {
         board_task::Entity::find()
             .filter(board_task::Column::IdeaId.eq(idea_id))
             .order_by_asc(board_task::Column::Position)
@@ -187,9 +181,7 @@ impl<'a> BoardTaskRepository<'a> {
 
     /// Delete a task by ID.
     pub async fn delete(&self, id: Uuid) -> Result<DeleteResult, DbErr> {
-        board_task::Entity::delete_by_id(id)
-            .exec(self.db)
-            .await
+        board_task::Entity::delete_by_id(id).exec(self.db).await
     }
 
     /// Count tasks for an idea.

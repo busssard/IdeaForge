@@ -31,8 +31,6 @@ pub async fn review_application(
     .await
 }
 
-pub async fn list_team_members(
-    idea_id: &str,
-) -> Result<Vec<TeamMemberResponse>, client::ApiError> {
+pub async fn list_team_members(idea_id: &str) -> Result<Vec<TeamMemberResponse>, client::ApiError> {
     client::get(&format!("/api/v1/ideas/{idea_id}/team")).await
 }

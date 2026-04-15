@@ -24,9 +24,7 @@ fn SettingsContent() -> impl IntoView {
     let loading = RwSignal::new(false);
 
     // Load current user data
-    let user_data = LocalResource::new(move || async move {
-        api::users::get_me().await
-    });
+    let user_data = LocalResource::new(move || async move { api::users::get_me().await });
 
     // NodeRefs for form inputs
     let name_ref = NodeRef::<leptos::html::Input>::new();
@@ -43,11 +41,17 @@ fn SettingsContent() -> impl IntoView {
         let display_name = name_ref.get().map(|el| el.value()).unwrap_or_default();
         let bio = bio_ref.get().map(|el| el.value()).unwrap_or_default();
         let skills_str = skills_ref.get().map(|el| el.value()).unwrap_or_default();
-        let looking_for = looking_for_ref.get().map(|el| el.value()).unwrap_or_default();
-        let availability = availability_ref.get().map(|el| {
-            let el: &web_sys::HtmlSelectElement = &el;
-            el.value()
-        }).unwrap_or_default();
+        let looking_for = looking_for_ref
+            .get()
+            .map(|el| el.value())
+            .unwrap_or_default();
+        let availability = availability_ref
+            .get()
+            .map(|el| {
+                let el: &web_sys::HtmlSelectElement = &el;
+                el.value()
+            })
+            .unwrap_or_default();
 
         if display_name.trim().is_empty() {
             error.set("Display name cannot be empty.".to_string());
@@ -78,8 +82,16 @@ fn SettingsContent() -> impl IntoView {
                 display_name: Some(display_name),
                 bio: Some(bio),
                 skills: Some(skills),
-                looking_for: if looking_for.is_empty() { Some(None) } else { Some(Some(looking_for)) },
-                availability: if availability.is_empty() { None } else { Some(availability) },
+                looking_for: if looking_for.is_empty() {
+                    Some(None)
+                } else {
+                    Some(Some(looking_for))
+                },
+                availability: if availability.is_empty() {
+                    None
+                } else {
+                    Some(availability)
+                },
             };
 
             match api::users::update_me(req).await {

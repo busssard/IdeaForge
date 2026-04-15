@@ -3,11 +3,11 @@
 //! Users can subscribe to ideas to get notified of updates.
 
 use axum::{
+    Json, Router,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
 use serde::Serialize;
 use uuid::Uuid;
@@ -34,9 +34,7 @@ async fn subscription_status(
 ) -> impl IntoResponse {
     let repo = SubscriptionRepository::new(state.db.connection());
     match repo.exists(auth.user_id, id).await {
-        Ok(subscribed) => {
-            Json(SubscriptionStatusResponse { subscribed }).into_response()
-        }
+        Ok(subscribed) => Json(SubscriptionStatusResponse { subscribed }).into_response(),
         Err(e) => {
             tracing::error!("Failed to check subscription status: {e}");
             err(

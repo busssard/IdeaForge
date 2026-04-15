@@ -1,9 +1,9 @@
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::get,
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -115,7 +115,7 @@ async fn get_nda_template(
             }
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");
@@ -186,7 +186,7 @@ async fn create_nda_template(
             }
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");
@@ -223,7 +223,10 @@ async fn create_nda_template(
                         tmpl.id,
                         Some(body.title.as_deref().unwrap_or(&tmpl.title)),
                         Some(&body.body),
-                        Some(body.confidentiality_period_days.unwrap_or(tmpl.confidentiality_period_days)),
+                        Some(
+                            body.confidentiality_period_days
+                                .unwrap_or(tmpl.confidentiality_period_days),
+                        ),
                         Some(body.jurisdiction.as_deref()),
                     )
                     .await
@@ -339,7 +342,7 @@ async fn sign_nda(
             idea
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");
@@ -372,7 +375,7 @@ async fn sign_nda(
                 "NOT_FOUND",
                 "No NDA template found for this idea",
             )
-            .into_response()
+            .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find NDA template: {e}");
@@ -394,7 +397,7 @@ async fn sign_nda(
                 "ALREADY_SIGNED",
                 "You have already signed the NDA for this idea",
             )
-            .into_response()
+            .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to check NDA signature: {e}");
@@ -512,10 +515,10 @@ async fn list_nda_signatures(
                 "FORBIDDEN",
                 "Only the idea author can view NDA signatures",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");

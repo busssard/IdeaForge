@@ -20,20 +20,32 @@ pub fn PeoplePage() -> impl IntoView {
 
     let sort_token = Memo::new(move |_| {
         match sort_field.get().as_str() {
-            "joined" => if sort_dir.get() == "asc" { "oldest" } else { "recently_joined" },
-            "name" => if sort_dir.get() == "asc" { "name_asc" } else { "name_desc" },
+            "joined" => {
+                if sort_dir.get() == "asc" {
+                    "oldest"
+                } else {
+                    "recently_joined"
+                }
+            }
+            "name" => {
+                if sort_dir.get() == "asc" {
+                    "name_asc"
+                } else {
+                    "name_desc"
+                }
+            }
             // Aggregate sorts only make sense desc ("most X") — the UI hides the
             // direction toggle for these via `aggregate_active`.
             "ideas" => "most_ideas",
             "stokes" => "most_stokes",
             "active" => "most_active",
             _ => "recently_joined",
-        }.to_string()
+        }
+        .to_string()
     });
 
-    let aggregate_active = Memo::new(move |_| {
-        matches!(sort_field.get().as_str(), "ideas" | "stokes" | "active")
-    });
+    let aggregate_active =
+        Memo::new(move |_| matches!(sort_field.get().as_str(), "ideas" | "stokes" | "active"));
 
     let users = LocalResource::new(move || {
         let role = role_filter.get();
@@ -41,14 +53,28 @@ pub fn PeoplePage() -> impl IntoView {
         let sort = sort_token.get();
         let p = page.get();
         async move {
-            let role_opt = if role.is_empty() { None } else { Some(role.as_str()) };
-            let skills_opt = if skills.is_empty() { None } else { Some(skills.as_str()) };
+            let role_opt = if role.is_empty() {
+                None
+            } else {
+                Some(role.as_str())
+            };
+            let skills_opt = if skills.is_empty() {
+                None
+            } else {
+                Some(skills.as_str())
+            };
             api::users::list_users(p, 20, role_opt, skills_opt, Some(sort.as_str())).await
         }
     });
 
     let toggle_sort_dir = move |_: web_sys::MouseEvent| {
-        sort_dir.update(|d| *d = if d == "desc" { "asc".to_string() } else { "desc".to_string() });
+        sort_dir.update(|d| {
+            *d = if d == "desc" {
+                "asc".to_string()
+            } else {
+                "desc".to_string()
+            }
+        });
         page.set(1);
     };
 
@@ -254,8 +280,14 @@ fn UserCard(user: PublicUserResponse) -> impl IntoView {
         "admin" => "Admin".to_string(),
         _ => role.clone(),
     };
-    let skills: Vec<String> = user.skills.as_array()
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+    let skills: Vec<String> = user
+        .skills
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
         .unwrap_or_default();
     let looking_for = user.looking_for.clone();
     let idea_count = user.idea_count;
@@ -263,7 +295,12 @@ fn UserCard(user: PublicUserResponse) -> impl IntoView {
     let avatar_url = user.avatar_url.clone();
 
     let role_class = format!("user-card-role role-{}", role);
-    let fallback_letter = display_name.chars().next().unwrap_or('?').to_uppercase().to_string();
+    let fallback_letter = display_name
+        .chars()
+        .next()
+        .unwrap_or('?')
+        .to_uppercase()
+        .to_string();
 
     view! {
         <A href=format!("/profile/{id}") attr:class="user-card card card-clickable fade-in" attr:style="text-decoration: none; color: inherit; display: block;">

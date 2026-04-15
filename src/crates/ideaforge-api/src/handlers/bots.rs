@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use axum::{
+    Json, Router,
     extract::{FromRequestParts, Path, State},
-    http::{request::Parts, StatusCode},
+    http::{StatusCode, request::Parts},
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -232,12 +232,8 @@ async fn register_bot(
     // Check if email already taken
     match repo.find_by_email(&email).await {
         Ok(Some(_)) => {
-            return err(
-                StatusCode::CONFLICT,
-                "CONFLICT",
-                "Email already registered",
-            )
-            .into_response();
+            return err(StatusCode::CONFLICT, "CONFLICT", "Email already registered")
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error checking email: {e}");
@@ -348,7 +344,7 @@ async fn endorse_idea(
     let idea_repo = IdeaRepository::new(state.db.connection());
     match idea_repo.find_by_id(idea_id).await {
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea for endorsement: {e}");
@@ -372,7 +368,7 @@ async fn endorse_idea(
                 "CONFLICT",
                 "Bot has already endorsed this idea",
             )
-            .into_response()
+            .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to check endorsement existence: {e}");
@@ -386,9 +382,7 @@ async fn endorse_idea(
         Ok(false) => {}
     }
 
-    let reasoning = body
-        .and_then(|b| b.reasoning.clone())
-        .unwrap_or_default();
+    let reasoning = body.and_then(|b| b.reasoning.clone()).unwrap_or_default();
 
     // Create endorsement
     match endorsement_repo

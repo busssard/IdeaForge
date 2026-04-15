@@ -29,7 +29,9 @@ pub fn MarkdownEditor(
     // selection. If there is no selection, inserts a placeholder so the user
     // sees the pattern and can type over it.
     let apply = move |before: &'static str, after: &'static str, placeholder_text: &'static str| {
-        let Some(ta) = textarea_ref.get() else { return; };
+        let Some(ta) = textarea_ref.get() else {
+            return;
+        };
         let el: web_sys::HtmlTextAreaElement = ta.unchecked_into();
         let start = el.selection_start().unwrap_or(None).unwrap_or(0) as usize;
         let end = el.selection_end().unwrap_or(None).unwrap_or(0) as usize;
@@ -48,7 +50,11 @@ pub fn MarkdownEditor(
             (current.clone(), String::new(), String::new())
         };
 
-        let selected = if mid.is_empty() { placeholder_text } else { mid.as_str() };
+        let selected = if mid.is_empty() {
+            placeholder_text
+        } else {
+            mid.as_str()
+        };
         let new_val = format!("{left}{before}{selected}{after}{right}");
         value.set(new_val.clone());
         el.set_value(&new_val);

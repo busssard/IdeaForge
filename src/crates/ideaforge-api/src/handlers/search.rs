@@ -1,4 +1,4 @@
-use axum::{extract::Query, routing::get, Router};
+use axum::{Router, extract::Query, routing::get};
 use serde::Deserialize;
 
 use crate::state::AppState;

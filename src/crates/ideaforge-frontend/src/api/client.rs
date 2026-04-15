@@ -1,7 +1,7 @@
 use gloo_net::http::{Request, RequestBuilder, Response};
 use gloo_storage::{LocalStorage, Storage};
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use super::types::ApiErrorResponse;
 
@@ -95,7 +95,9 @@ async fn try_refresh_tokens() -> bool {
     else {
         return false;
     };
-    let Ok(resp) = req.send().await else { return false; };
+    let Ok(resp) = req.send().await else {
+        return false;
+    };
     if !resp.ok() {
         return false;
     }

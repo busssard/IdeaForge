@@ -13,7 +13,7 @@ use crate::state::mls_state::MlsState;
 enum Phase {
     Loading,
     NoKeystore,
-    Locked(i64),   // timestamp ms
+    Locked(i64), // timestamp ms
     Unlock,
     Unlocked,
     Error(String),

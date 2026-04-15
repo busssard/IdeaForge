@@ -70,11 +70,7 @@ pub fn BugReportButton() -> impl IntoView {
                 "severity": severity,
             });
 
-            match client::post::<serde_json::Value, serde_json::Value>(
-                "/api/v1/bugs",
-                &body,
-            )
-            .await
+            match client::post::<serde_json::Value, serde_json::Value>("/api/v1/bugs", &body).await
             {
                 Ok(_) => {
                     submitted.set(true);

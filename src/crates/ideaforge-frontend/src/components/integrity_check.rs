@@ -18,8 +18,14 @@ use wasm_bindgen::JsCast;
 #[derive(Clone, Debug, PartialEq)]
 enum Check {
     Loading,
-    Match { loaded: usize, published: usize },
-    Mismatch { loaded: Vec<String>, missing: Vec<String> },
+    Match {
+        loaded: usize,
+        published: usize,
+    },
+    Mismatch {
+        loaded: Vec<String>,
+        missing: Vec<String>,
+    },
     NoManifest,
     Error(String),
 }
@@ -137,8 +143,12 @@ async fn run_check() -> Check {
     let mut loaded: Vec<(String, String)> = Vec::new();
     for i in 0..nodes.length() {
         let Some(node) = nodes.item(i) else { continue };
-        let Ok(el) = node.dyn_into::<web_sys::Element>() else { continue };
-        let Some(integ) = el.get_attribute("integrity") else { continue };
+        let Ok(el) = node.dyn_into::<web_sys::Element>() else {
+            continue;
+        };
+        let Some(integ) = el.get_attribute("integrity") else {
+            continue;
+        };
         let href = el
             .get_attribute("href")
             .or_else(|| el.get_attribute("src"))
@@ -176,7 +186,9 @@ async fn run_check() -> Check {
             continue;
         }
         // Split on whitespace, first column is the integrity hash.
-        let Some(integ) = line.split_whitespace().next() else { continue };
+        let Some(integ) = line.split_whitespace().next() else {
+            continue;
+        };
         published.insert(integ.to_string());
         published_count += 1;
     }
@@ -232,7 +244,9 @@ fn collect_loaded_hashes() -> Vec<(String, String)> {
     let mut out = Vec::new();
     for i in 0..nodes.length() {
         let Some(node) = nodes.item(i) else { continue };
-        let Ok(el) = node.dyn_into::<web_sys::Element>() else { continue };
+        let Ok(el) = node.dyn_into::<web_sys::Element>() else {
+            continue;
+        };
         let integ = el.get_attribute("integrity").unwrap_or_default();
         let href = el
             .get_attribute("href")

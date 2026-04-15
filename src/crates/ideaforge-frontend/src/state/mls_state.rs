@@ -55,8 +55,7 @@ impl MlsState {
     /// derived the keys (Argon2id); we cache them so subsequent `persist`
     /// calls don't re-prompt.
     pub fn set_client(&self, client: MlsClient, keys: DerivedKeys) {
-        self.client
-            .set_value(Some(Rc::new(RefCell::new(client))));
+        self.client.set_value(Some(Rc::new(RefCell::new(client))));
         self.keys.set_value(Some(keys));
         self.init_error.set(String::new());
     }

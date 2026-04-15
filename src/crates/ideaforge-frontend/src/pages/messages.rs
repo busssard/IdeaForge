@@ -50,8 +50,8 @@ struct LocalMessage {
 /// on the textarea having the `chat-composer-input` class.
 #[component]
 fn ComposerResizeHandle() -> impl IntoView {
-    use wasm_bindgen::closure::Closure;
     use wasm_bindgen::JsCast;
+    use wasm_bindgen::closure::Closure;
 
     let on_pointer_down = move |ev: web_sys::PointerEvent| {
         ev.prevent_default();
@@ -80,27 +80,24 @@ fn ComposerResizeHandle() -> impl IntoView {
 
         // --- pointermove: update textarea height ---
         let textarea_for_move = textarea.clone();
-        let move_closure = Closure::<dyn FnMut(web_sys::PointerEvent)>::new(
-            move |ev: web_sys::PointerEvent| {
+        let move_closure =
+            Closure::<dyn FnMut(web_sys::PointerEvent)>::new(move |ev: web_sys::PointerEvent| {
                 let delta = start_y - ev.client_y(); // up = positive
                 let new_h = (start_h + delta).max(70).min(800);
                 let _ = textarea_for_move
                     .style()
                     .set_property("height", &format!("{new_h}px"));
-            },
-        );
-        let _ = doc.add_event_listener_with_callback(
-            "pointermove",
-            move_closure.as_ref().unchecked_ref(),
-        );
+            });
+        let _ = doc
+            .add_event_listener_with_callback("pointermove", move_closure.as_ref().unchecked_ref());
         *move_closure_slot.borrow_mut() = Some(move_closure);
 
         // --- pointerup: detach both listeners ---
         let doc_for_up = doc.clone();
         let move_slot_for_up = move_closure_slot.clone();
         let up_slot_for_up = up_closure_slot.clone();
-        let up_closure = Closure::<dyn FnMut(web_sys::PointerEvent)>::new(
-            move |_ev: web_sys::PointerEvent| {
+        let up_closure =
+            Closure::<dyn FnMut(web_sys::PointerEvent)>::new(move |_ev: web_sys::PointerEvent| {
                 if let Some(mc) = move_slot_for_up.borrow_mut().take() {
                     let _ = doc_for_up.remove_event_listener_with_callback(
                         "pointermove",
@@ -113,12 +110,9 @@ fn ComposerResizeHandle() -> impl IntoView {
                         uc.as_ref().unchecked_ref(),
                     );
                 }
-            },
-        );
-        let _ = doc.add_event_listener_with_callback(
-            "pointerup",
-            up_closure.as_ref().unchecked_ref(),
-        );
+            });
+        let _ =
+            doc.add_event_listener_with_callback("pointerup", up_closure.as_ref().unchecked_ref());
         *up_closure_slot.borrow_mut() = Some(up_closure);
     };
 
@@ -436,11 +430,7 @@ fn ChatView(
 ) -> impl IntoView {
     let group_id = StoredValue::new(group_id);
     let title = StoredValue::new(title);
-    let current_user_id = auth
-        .user
-        .get_untracked()
-        .map(|u| u.id)
-        .unwrap_or_default();
+    let current_user_id = auth.user.get_untracked().map(|u| u.id).unwrap_or_default();
     let current_user_id = StoredValue::new(current_user_id);
     let draft = chat.draft;
     let sending = RwSignal::new(false);
@@ -457,11 +447,7 @@ fn ChatView(
         draft.set(String::new());
 
         let server_id = group_id.get_value();
-        let mls_group_id_b64 = chat
-            .group_map
-            .get_untracked()
-            .get(&server_id)
-            .cloned();
+        let mls_group_id_b64 = chat.group_map.get_untracked().get(&server_id).cloned();
         let Some(mls_group_id_b64) = mls_group_id_b64 else {
             chat.error.set("Unknown group.".to_string());
             return;
@@ -511,9 +497,7 @@ fn ChatView(
                         created_at: chrono::Utc::now().to_rfc3339(),
                     };
                     chat.messages.update(|map| {
-                        map.entry(mls_group_id_b64.clone())
-                            .or_default()
-                            .push(msg);
+                        map.entry(mls_group_id_b64.clone()).or_default().push(msg);
                     });
                     // Encrypting advanced the ratchet → save the new state.
                     persist_if_possible(mls).await;
@@ -742,10 +726,7 @@ fn spawn_welcome_accept_loop(
     });
 }
 
-async fn accept_pending_welcomes(
-    mls: MlsState,
-    chat: ChatState,
-) -> Result<(), ApiError> {
+async fn accept_pending_welcomes(mls: MlsState, chat: ChatState) -> Result<(), ApiError> {
     let welcomes = api::list_welcomes().await?;
     if welcomes.data.is_empty() {
         return Ok(());
@@ -816,7 +797,7 @@ async fn persist_if_possible(mls: MlsState) {
             return;
         }
     };
-    use base64::{engine::general_purpose::STANDARD, Engine};
+    use base64::{Engine, engine::general_purpose::STANDARD};
     let body = serde_json::json!({
         "verifier_b64": STANDARD.encode(keys.verifier),
         "wrapped_blob_b64": STANDARD.encode(wrapped),
@@ -836,10 +817,16 @@ fn spawn_message_poll_loop(mls: MlsState, chat: ChatState) {
         wasm_bindgen_futures::spawn_local(async move {
             loop {
                 gloo_timers::future::TimeoutFuture::new(POLL_INTERVAL_MS).await;
-                let Some(selected) = chat.selected.get_untracked() else { continue; };
+                let Some(selected) = chat.selected.get_untracked() else {
+                    continue;
+                };
                 let mls_b64 = chat.group_map.with_untracked(|m| m.get(&selected).cloned());
-                let Some(mls_b64) = mls_b64 else { continue; };
-                let Some(client) = mls.client_ref() else { continue; };
+                let Some(mls_b64) = mls_b64 else {
+                    continue;
+                };
+                let Some(client) = mls.client_ref() else {
+                    continue;
+                };
 
                 let mls_group_id = match api::decode(&mls_b64) {
                     Ok(v) => v,

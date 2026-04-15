@@ -1,9 +1,9 @@
 use axum::{
+    Json, Router,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -56,7 +56,10 @@ fn err(status: StatusCode, code: &str, message: &str) -> impl IntoResponse {
         .into_response()
 }
 
-fn invite_response(m: &ideaforge_db::entities::invite_link::Model, base_url: &str) -> InviteResponse {
+fn invite_response(
+    m: &ideaforge_db::entities::invite_link::Model,
+    base_url: &str,
+) -> InviteResponse {
     InviteResponse {
         id: m.id,
         idea_id: m.idea_id,
@@ -92,10 +95,10 @@ async fn create_invite(
                 "FORBIDDEN",
                 "Only the idea author can create invite links",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");
@@ -137,7 +140,8 @@ async fn create_invite(
     {
         Ok(invite) => {
             // TODO: Get base_url from config or request headers
-            let base_url = std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+            let base_url = std::env::var("FRONTEND_URL")
+                .unwrap_or_else(|_| "http://localhost:3000".to_string());
             (
                 StatusCode::CREATED,
                 Json(invite_response(&invite, &base_url)),
@@ -171,10 +175,10 @@ async fn list_invites(
                 "FORBIDDEN",
                 "Only the idea author can view invite links",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");
@@ -190,9 +194,13 @@ async fn list_invites(
     let invite_repo = InviteLinkRepository::new(state.db.connection());
     match invite_repo.list_for_idea(id).await {
         Ok(invites) => {
-            let base_url = std::env::var("FRONTEND_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+            let base_url = std::env::var("FRONTEND_URL")
+                .unwrap_or_else(|_| "http://localhost:3000".to_string());
             Json(InviteListResponse {
-                data: invites.iter().map(|i| invite_response(i, &base_url)).collect(),
+                data: invites
+                    .iter()
+                    .map(|i| invite_response(i, &base_url))
+                    .collect(),
             })
             .into_response()
         }
@@ -223,10 +231,10 @@ async fn revoke_invite(
                 "FORBIDDEN",
                 "Only the idea author can revoke invite links",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");
@@ -250,15 +258,10 @@ async fn revoke_invite(
                 "NOT_FOUND",
                 "Invite link not found for this idea",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(
-                StatusCode::NOT_FOUND,
-                "NOT_FOUND",
-                "Invite link not found",
-            )
-            .into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Invite link not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find invite link: {e}");

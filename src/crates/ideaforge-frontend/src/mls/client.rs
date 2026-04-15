@@ -228,7 +228,12 @@ impl MlsClient {
 
     /// Record a message this client just sent. `sender_user_id` is the
     /// caller's own id (used for consistent rendering on refresh).
-    pub fn remember_sent(&mut self, mls_group_id: &[u8], sender_user_id: String, plaintext: String) {
+    pub fn remember_sent(
+        &mut self,
+        mls_group_id: &[u8],
+        sender_user_id: String,
+        plaintext: String,
+    ) {
         self.messages.push(StoredSentMessage {
             mls_group_id: mls_group_id.to_vec(),
             sender_user_id,
@@ -304,10 +309,7 @@ impl MlsClient {
     }
 
     /// Validate and deserialize a peer's KeyPackage bytes.
-    pub fn import_peer_key_package(
-        &self,
-        bytes: &[u8],
-    ) -> Result<KeyPackage, MlsClientError> {
+    pub fn import_peer_key_package(&self, bytes: &[u8]) -> Result<KeyPackage, MlsClientError> {
         let kp_in = KeyPackageIn::tls_deserialize_exact(bytes)
             .map_err(|e| MlsClientError::Serde(format!("{e:?}")))?;
         kp_in
@@ -431,19 +433,21 @@ impl MlsClient {
             return Err(MlsClientError::UnknownGroup);
         }
 
-        let processed = group.process_message(&self.provider, protocol_msg).map_err(|e| {
-            let msg = format!("{e:?}");
-            if msg.contains("CannotDecryptOwnMessage") {
-                MlsClientError::OwnMessage
-            } else if msg.contains("SecretReuseError") || msg.contains("SecretTreeError") {
-                // Hash ratchet has already advanced past this message (we've
-                // seen it before). Silently skip — the stored plaintext
-                // remains from the first processing.
-                MlsClientError::AlreadyProcessed
-            } else {
-                MlsClientError::Protocol(format!("process_message: {msg}"))
-            }
-        })?;
+        let processed = group
+            .process_message(&self.provider, protocol_msg)
+            .map_err(|e| {
+                let msg = format!("{e:?}");
+                if msg.contains("CannotDecryptOwnMessage") {
+                    MlsClientError::OwnMessage
+                } else if msg.contains("SecretReuseError") || msg.contains("SecretTreeError") {
+                    // Hash ratchet has already advanced past this message (we've
+                    // seen it before). Silently skip — the stored plaintext
+                    // remains from the first processing.
+                    MlsClientError::AlreadyProcessed
+                } else {
+                    MlsClientError::Protocol(format!("process_message: {msg}"))
+                }
+            })?;
 
         match processed.into_content() {
             ProcessedMessageContent::ApplicationMessage(app) => Ok(Some(app.into_bytes())),

@@ -46,8 +46,8 @@ impl<'a> ContributionRepository<'a> {
         page: u64,
         per_page: u64,
     ) -> Result<(Vec<contribution::Model>, u64), DbErr> {
-        let mut query = contribution::Entity::find()
-            .filter(contribution::Column::IdeaId.eq(idea_id));
+        let mut query =
+            contribution::Entity::find().filter(contribution::Column::IdeaId.eq(idea_id));
 
         if let Some(ct) = contribution_type {
             query = query.filter(contribution::Column::ContributionType.eq(ct));

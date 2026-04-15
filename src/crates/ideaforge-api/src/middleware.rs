@@ -1,8 +1,8 @@
 use axum::http::{HeaderName, HeaderValue};
+use tower_http::classify::ServerErrorsAsFailures;
+use tower_http::classify::SharedClassifier;
 use tower_http::cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer};
 use tower_http::set_header::SetResponseHeaderLayer;
-use tower_http::classify::SharedClassifier;
-use tower_http::classify::ServerErrorsAsFailures;
 use tower_http::trace::TraceLayer;
 
 /// CORS layer — permissive for local development, lock down for production.

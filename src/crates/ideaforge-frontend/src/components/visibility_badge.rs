@@ -5,8 +5,16 @@ use leptos::prelude::*;
 pub fn VisibilityBadge(openness: String) -> impl IntoView {
     let (class, label, icon) = match openness.as_str() {
         "open" => ("badge badge-open", "Open Source".to_string(), "\u{1F513}"),
-        "collaborative" => ("badge badge-collaborative", "Collaborative".to_string(), "\u{1F91D}"),
-        "commercial" => ("badge badge-commercial", "Commercial".to_string(), "\u{1F4BC}"),
+        "collaborative" => (
+            "badge badge-collaborative",
+            "Collaborative".to_string(),
+            "\u{1F91D}",
+        ),
+        "commercial" => (
+            "badge badge-commercial",
+            "Commercial".to_string(),
+            "\u{1F4BC}",
+        ),
         "private" => ("badge badge-private", "Private".to_string(), "\u{1F512}"),
         other => ("badge", other.to_string(), ""),
     };

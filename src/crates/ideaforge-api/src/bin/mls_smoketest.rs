@@ -20,10 +20,10 @@
 //!   ALICE_EMAIL=alice@example.com  ALICE_PASSWORD=Test1234!
 //!   BOB_EMAIL=bob@example.com      BOB_PASSWORD=Test1234!
 
-use anyhow::{anyhow, bail, Context, Result};
-use base64::{engine::general_purpose::STANDARD, Engine};
-use openmls::prelude::*;
+use anyhow::{Context, Result, anyhow, bail};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use openmls::prelude::tls_codec::{Deserialize as TlsDeserialize, Serialize as TlsSerialize};
+use openmls::prelude::*;
 use openmls_basic_credential::SignatureKeyPair;
 use openmls_rust_crypto::OpenMlsRustCrypto;
 use openmls_traits::OpenMlsProvider;
@@ -157,12 +157,12 @@ async fn publish_key_packages(
     if !resp.status().is_success() {
         let status = resp.status();
         let text = resp.text().await.unwrap_or_default();
-        bail!("publish keypackages for {} → {status}: {text}", session.label);
+        bail!(
+            "publish keypackages for {} → {status}: {text}",
+            session.label
+        );
     }
-    println!(
-        "  · {} published {count} KeyPackage(s)",
-        session.label
-    );
+    println!("  · {} published {count} KeyPackage(s)", session.label);
     Ok(bundles)
 }
 
@@ -171,7 +171,10 @@ async fn consume_key_package(session: &Session, target_user_id: &str) -> Result<
     struct Resp {
         key_package_b64: String,
     }
-    let url = format!("{}/api/v1/mls/keypackages/{target_user_id}/consume", session.api);
+    let url = format!(
+        "{}/api/v1/mls/keypackages/{target_user_id}/consume",
+        session.api
+    );
     let resp = session
         .http
         .post(&url)
@@ -335,7 +338,10 @@ async fn list_messages(
     struct Resp {
         data: Vec<Envelope>,
     }
-    let url = format!("{}/api/v1/mls/groups/{group_id}/messages?since={since}", session.api);
+    let url = format!(
+        "{}/api/v1/mls/groups/{group_id}/messages?since={since}",
+        session.api
+    );
     let resp = session
         .http
         .get(&url)
@@ -411,9 +417,7 @@ async fn main() -> Result<()> {
     let alice_purged = purge_my_keypackages(&alice).await?;
     let bob_purged = purge_my_keypackages(&bob).await?;
     if alice_purged + bob_purged > 0 {
-        println!(
-            "  · purged {alice_purged} alice + {bob_purged} bob stale KeyPackages"
-        );
+        println!("  · purged {alice_purged} alice + {bob_purged} bob stale KeyPackages");
     }
 
     println!("-- Generating MLS identities --");
@@ -517,8 +521,8 @@ async fn main() -> Result<()> {
     println!("  · Bob sees {} pending Welcome(s)", welcomes.len());
     let (welcome_id, welcome_ciphertext) = welcomes.into_iter().next().unwrap();
 
-    let welcome_msg = MlsMessageIn::tls_deserialize_exact(&welcome_ciphertext)
-        .context("deserialize Welcome")?;
+    let welcome_msg =
+        MlsMessageIn::tls_deserialize_exact(&welcome_ciphertext).context("deserialize Welcome")?;
     let welcome_in = match welcome_msg.extract() {
         MlsMessageBodyIn::Welcome(w) => w,
         other => bail!("Bob received a non-Welcome message: {:?}", other),
@@ -534,8 +538,10 @@ async fn main() -> Result<()> {
         .into_group(&bob_id.provider)
         .map_err(|e| anyhow!("StagedWelcome::into_group failed: {e:?}"))?;
     ack_welcome(&bob, &welcome_id).await?;
-    println!("  · Bob joined the group, group_id_matches = {}",
-        bob_group.group_id().as_slice() == mls_group_id);
+    println!(
+        "  · Bob joined the group, group_id_matches = {}",
+        bob_group.group_id().as_slice() == mls_group_id
+    );
 
     if bob_group.group_id().as_slice() != mls_group_id {
         bail!("group id mismatch between Alice and Bob");
@@ -558,8 +564,8 @@ async fn main() -> Result<()> {
     }
     println!("  · Bob received {} message(s)", messages.len());
     let (_msg_id, msg_bytes) = messages.into_iter().next().unwrap();
-    let incoming = MlsMessageIn::tls_deserialize_exact(&msg_bytes)
-        .context("deserialize Application")?;
+    let incoming =
+        MlsMessageIn::tls_deserialize_exact(&msg_bytes).context("deserialize Application")?;
     let protocol_msg = match incoming.extract() {
         MlsMessageBodyIn::PrivateMessage(m) => ProtocolMessage::from(m),
         MlsMessageBodyIn::PublicMessage(m) => ProtocolMessage::from(m),

@@ -1,9 +1,9 @@
 use axum::{
+    Json, Router,
     extract::{Multipart, Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -127,11 +127,22 @@ async fn list_users(
 
     let repo = UserRepository::new(state.db.connection());
     match repo
-        .list(role_filter, skills_filter, include_bots, sort, page, per_page)
+        .list(
+            role_filter,
+            skills_filter,
+            include_bots,
+            sort,
+            page,
+            per_page,
+        )
         .await
     {
         Ok((users, total)) => {
-            let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
+            let total_pages = if total == 0 {
+                0
+            } else {
+                (total + per_page - 1) / per_page
+            };
             Json(UserListResponse {
                 data: users
                     .iter()
@@ -170,10 +181,7 @@ async fn list_users(
     }
 }
 
-async fn get_me(
-    State(state): State<AppState>,
-    auth: AuthUser,
-) -> impl IntoResponse {
+async fn get_me(State(state): State<AppState>, auth: AuthUser) -> impl IntoResponse {
     let repo = UserRepository::new(state.db.connection());
     match repo.find_by_id(auth.user_id).await {
         Ok(Some(user)) => Json(UserResponse {
@@ -306,10 +314,7 @@ async fn update_me(
     }
 }
 
-async fn get_user(
-    State(state): State<AppState>,
-    Path(id): Path<Uuid>,
-) -> impl IntoResponse {
+async fn get_user(State(state): State<AppState>, Path(id): Path<Uuid>) -> impl IntoResponse {
     use ideaforge_db::entities::{idea, stoke};
     use sea_orm::*;
 
@@ -426,8 +431,12 @@ async fn upload_avatar(
     };
 
     if bytes.is_empty() {
-        return err(StatusCode::BAD_REQUEST, "EMPTY_FILE", "Uploaded file is empty")
-            .into_response();
+        return err(
+            StatusCode::BAD_REQUEST,
+            "EMPTY_FILE",
+            "Uploaded file is empty",
+        )
+        .into_response();
     }
 
     if bytes.len() > AVATAR_MAX_BYTES {

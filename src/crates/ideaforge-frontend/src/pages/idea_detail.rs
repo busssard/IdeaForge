@@ -1,6 +1,6 @@
 use leptos::prelude::*;
-use leptos_router::hooks::use_params_map;
 use leptos_router::components::A;
+use leptos_router::hooks::use_params_map;
 
 use crate::api;
 use crate::api::types::UpdateIdeaRequest;

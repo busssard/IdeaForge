@@ -17,11 +17,7 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(
-                        ColumnDef::new(Categories::Name)
-                            .string_len(100)
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(Categories::Name).string_len(100).not_null())
                     .col(
                         ColumnDef::new(Categories::Slug)
                             .string_len(100)

@@ -4,11 +4,11 @@
 //! that let Entrepreneurs build teams around their ideas.
 
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get, put},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -137,7 +137,7 @@ async fn apply_to_team(
     let idea = match idea_repo.find_by_id(id).await {
         Ok(Some(idea)) => idea,
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");
@@ -169,7 +169,7 @@ async fn apply_to_team(
                 "CONFLICT",
                 "You already have an active application for this idea",
             )
-            .into_response()
+            .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to check application existence: {e}");
@@ -192,7 +192,7 @@ async fn apply_to_team(
                 "CONFLICT",
                 "You are already a team member",
             )
-            .into_response()
+            .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to check team membership: {e}");
@@ -252,10 +252,10 @@ async fn list_applications(
                 "FORBIDDEN",
                 "Only the idea author can view applications",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");
@@ -337,10 +337,10 @@ async fn review_application(
                 "FORBIDDEN",
                 "Only the idea author can review applications",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");
@@ -363,15 +363,10 @@ async fn review_application(
                 "NOT_FOUND",
                 "Application not found for this idea",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(
-                StatusCode::NOT_FOUND,
-                "NOT_FOUND",
-                "Application not found",
-            )
-            .into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Application not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find application: {e}");
@@ -423,10 +418,7 @@ async fn review_application(
     }
 
     // Update application status
-    match app_repo
-        .update_status(aid, new_status, auth.user_id)
-        .await
-    {
+    match app_repo.update_status(aid, new_status, auth.user_id).await {
         Ok(app) => Json(ApplicationResponse {
             id: app.id,
             idea_id: app.idea_id,
@@ -497,10 +489,10 @@ async fn remove_team_member(
                 "FORBIDDEN",
                 "Only the idea author can remove team members",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");
@@ -516,12 +508,7 @@ async fn remove_team_member(
     let member_repo = TeamMemberRepository::new(state.db.connection());
     match member_repo.remove(id, uid).await {
         Ok(result) if result.rows_affected == 0 => {
-            err(
-                StatusCode::NOT_FOUND,
-                "NOT_FOUND",
-                "Team member not found",
-            )
-            .into_response()
+            err(StatusCode::NOT_FOUND, "NOT_FOUND", "Team member not found").into_response()
         }
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(e) => {
@@ -552,10 +539,10 @@ async fn update_team_role(
                 "FORBIDDEN",
                 "Only the idea author can change team roles",
             )
-            .into_response()
+            .into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea: {e}");
@@ -624,12 +611,7 @@ async fn update_team_role(
         })
         .into_response(),
         Err(sea_orm::DbErr::RecordNotFound(_)) => {
-            err(
-                StatusCode::NOT_FOUND,
-                "NOT_FOUND",
-                "Team member not found",
-            )
-            .into_response()
+            err(StatusCode::NOT_FOUND, "NOT_FOUND", "Team member not found").into_response()
         }
         Err(e) => {
             tracing::error!("Failed to update team role: {e}");

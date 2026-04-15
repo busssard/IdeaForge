@@ -17,7 +17,10 @@ pub fn IdeaCard(idea: IdeaResponse) -> impl IntoView {
     let created_date = idea.created_at.split('T').next().unwrap_or("").to_string();
     let has_stoked = idea.has_stoked.unwrap_or(false);
     let show_visibility = openness != "open"; // only show badge for non-default visibility
-    let author_name = idea.author_name.clone().unwrap_or_else(|| "Unknown".to_string());
+    let author_name = idea
+        .author_name
+        .clone()
+        .unwrap_or_else(|| "Unknown".to_string());
 
     // Check if the current user is the author of this idea
     let auth = expect_context::<AuthState>();

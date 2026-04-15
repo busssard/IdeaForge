@@ -40,10 +40,8 @@ impl MigrationTrait for Migration {
             .await?;
         conn.execute_unprepared("ALTER TABLE notifications DROP COLUMN IF EXISTS count")
             .await?;
-        conn.execute_unprepared(
-            "ALTER TABLE notifications DROP COLUMN IF EXISTS related_user_id",
-        )
-        .await?;
+        conn.execute_unprepared("ALTER TABLE notifications DROP COLUMN IF EXISTS related_user_id")
+            .await?;
         Ok(())
     }
 }

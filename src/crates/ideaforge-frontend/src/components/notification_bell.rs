@@ -30,7 +30,10 @@ pub fn NotificationBell() -> impl IntoView {
         let _ = tick.get();
         async move {
             if auth.user.get_untracked().is_some() {
-                api::notifications::unread_count().await.ok().map(|r| r.unread_count)
+                api::notifications::unread_count()
+                    .await
+                    .ok()
+                    .map(|r| r.unread_count)
             } else {
                 None
             }

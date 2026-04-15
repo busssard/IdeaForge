@@ -34,7 +34,8 @@ pub fn BrowsePage() -> impl IntoView {
             ("comments", "asc") => "comments_asc",
             ("comments", _) => "comments_desc",
             _ => "recent",
-        }.to_string()
+        }
+        .to_string()
     });
 
     // Load categories for filter dropdown
@@ -54,10 +55,26 @@ pub fn BrowsePage() -> impl IntoView {
             api::ideas::list_ideas_v2(
                 p,
                 per_page,
-                if cat.is_empty() { None } else { Some(cat.as_str()) },
-                if mat.is_empty() { None } else { Some(mat.as_str()) },
-                if opn.is_empty() { None } else { Some(opn.as_str()) },
-                if lc.is_empty() { None } else { Some(lc.as_str()) },
+                if cat.is_empty() {
+                    None
+                } else {
+                    Some(cat.as_str())
+                },
+                if mat.is_empty() {
+                    None
+                } else {
+                    Some(mat.as_str())
+                },
+                if opn.is_empty() {
+                    None
+                } else {
+                    Some(opn.as_str())
+                },
+                if lc.is_empty() {
+                    None
+                } else {
+                    Some(lc.as_str())
+                },
                 Some(srt.as_str()),
                 None,
             )
@@ -82,7 +99,13 @@ pub fn BrowsePage() -> impl IntoView {
     };
 
     let toggle_sort_dir = move |_: web_sys::MouseEvent| {
-        sort_dir.update(|d| *d = if d == "desc" { "asc".to_string() } else { "desc".to_string() });
+        sort_dir.update(|d| {
+            *d = if d == "desc" {
+                "asc".to_string()
+            } else {
+                "desc".to_string()
+            }
+        });
         page.set(1);
     };
 

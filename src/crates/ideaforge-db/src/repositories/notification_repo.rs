@@ -47,8 +47,8 @@ impl<'a> NotificationRepository<'a> {
         page: u64,
         per_page: u64,
     ) -> Result<(Vec<notification::Model>, u64), DbErr> {
-        let mut query = notification::Entity::find()
-            .filter(notification::Column::UserId.eq(user_id));
+        let mut query =
+            notification::Entity::find().filter(notification::Column::UserId.eq(user_id));
 
         if unread_only {
             query = query.filter(notification::Column::ReadAt.is_null());

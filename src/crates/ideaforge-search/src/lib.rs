@@ -16,8 +16,12 @@ pub trait SearchEngine: Send + Sync {
     fn remove_idea(&self, idea_id: Uuid) -> Result<(), SearchError>;
 
     /// Search ideas by query string.
-    fn search_ideas(&self, query: &str, limit: usize, offset: usize)
-        -> Result<SearchResults, SearchError>;
+    fn search_ideas(
+        &self,
+        query: &str,
+        limit: usize,
+        offset: usize,
+    ) -> Result<SearchResults, SearchError>;
 }
 
 /// Document representing an idea in the search index.

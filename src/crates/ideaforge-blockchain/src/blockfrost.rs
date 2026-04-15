@@ -146,10 +146,7 @@ impl BlockfrostClient {
             debug!(address, page, "Querying UTxOs from Blockfrost");
 
             let response = self
-                .request(
-                    reqwest::Method::GET,
-                    &format!("/addresses/{address}/utxos"),
-                )
+                .request(reqwest::Method::GET, &format!("/addresses/{address}/utxos"))
                 .query(&[("page", page.to_string())])
                 .send()
                 .await?;
@@ -278,9 +275,7 @@ impl BlockfrostClient {
     }
 
     /// Get the latest protocol parameters for transaction building.
-    pub async fn get_protocol_parameters(
-        &self,
-    ) -> Result<ProtocolParameters, BlockfrostError> {
+    pub async fn get_protocol_parameters(&self) -> Result<ProtocolParameters, BlockfrostError> {
         debug!("Fetching latest protocol parameters");
 
         let response = self
@@ -293,9 +288,7 @@ impl BlockfrostClient {
         }
 
         let params: BlockfrostProtocolParams = response.json().await.map_err(|e| {
-            BlockfrostError::Deserialization(format!(
-                "Failed to parse protocol parameters: {e}"
-            ))
+            BlockfrostError::Deserialization(format!("Failed to parse protocol parameters: {e}"))
         })?;
 
         // Blockfrost returns some fields as strings, some as numbers.

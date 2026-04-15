@@ -11,16 +11,16 @@ use leptos_router::path;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 use components::bug_report::BugReportButton;
-use components::layout::navbar::Navbar;
 use components::layout::footer::Footer;
+use components::layout::navbar::Navbar;
 use components::onboarding_checklist::OnboardingChecklist;
+use pages::about::AboutPage;
 use pages::auth::LoginPage;
 use pages::auth::RegisterPage;
 use pages::browse::BrowsePage;
 use pages::create_idea::CreateIdeaPage;
 use pages::dashboard::DashboardPage;
 use pages::home::HomePage;
-use pages::about::AboutPage;
 use pages::how_it_works::HowItWorksPage;
 use pages::idea_detail::IdeaDetailPage;
 use pages::messages::MessagesPage;
@@ -72,9 +72,7 @@ pub fn App() -> impl IntoView {
 #[component]
 fn ChromeAndRoutes() -> impl IntoView {
     let location = use_location();
-    let is_fullscreen_route = Memo::new(move |_| {
-        location.pathname.get().starts_with("/messages")
-    });
+    let is_fullscreen_route = Memo::new(move |_| location.pathname.get().starts_with("/messages"));
 
     view! {
         {move || (!is_fullscreen_route.get()).then(|| view! { <OnboardingChecklist /> })}

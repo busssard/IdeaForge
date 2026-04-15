@@ -104,11 +104,16 @@ impl MigrationTrait for Migration {
         let conn = manager.get_connection();
 
         // Order matters for FKs.
-        conn.execute_unprepared("DROP TABLE IF EXISTS mls_welcomes").await?;
-        conn.execute_unprepared("DROP TABLE IF EXISTS mls_messages").await?;
-        conn.execute_unprepared("DROP TABLE IF EXISTS mls_group_members").await?;
-        conn.execute_unprepared("DROP TABLE IF EXISTS mls_groups").await?;
-        conn.execute_unprepared("DROP TABLE IF EXISTS mls_keypackages").await?;
+        conn.execute_unprepared("DROP TABLE IF EXISTS mls_welcomes")
+            .await?;
+        conn.execute_unprepared("DROP TABLE IF EXISTS mls_messages")
+            .await?;
+        conn.execute_unprepared("DROP TABLE IF EXISTS mls_group_members")
+            .await?;
+        conn.execute_unprepared("DROP TABLE IF EXISTS mls_groups")
+            .await?;
+        conn.execute_unprepared("DROP TABLE IF EXISTS mls_keypackages")
+            .await?;
 
         Ok(())
     }

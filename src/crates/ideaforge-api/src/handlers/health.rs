@@ -1,4 +1,4 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use sea_orm::ConnectionTrait;
 use serde::Serialize;
 
@@ -13,12 +13,7 @@ pub struct HealthResponse {
 
 pub async fn health_check(State(state): State<AppState>) -> impl IntoResponse {
     // Check DB connectivity
-    let db_status = match state
-        .db
-        .connection()
-        .execute_unprepared("SELECT 1")
-        .await
-    {
+    let db_status = match state.db.connection().execute_unprepared("SELECT 1").await {
         Ok(_) => "connected",
         Err(_) => "disconnected",
     };

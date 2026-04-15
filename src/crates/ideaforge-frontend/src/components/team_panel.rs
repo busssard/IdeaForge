@@ -20,12 +20,7 @@ pub fn TeamPanel(idea_id: String, author_id: String) -> impl IntoView {
     // Check if current user is the author
     let is_author = {
         let author_id = author_id.clone();
-        Memo::new(move |_| {
-            auth.user
-                .get()
-                .map(|u| u.id == author_id)
-                .unwrap_or(false)
-        })
+        Memo::new(move |_| auth.user.get().map(|u| u.id == author_id).unwrap_or(false))
     };
 
     // Load team members on mount

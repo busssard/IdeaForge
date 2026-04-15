@@ -28,16 +28,8 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(ColumnDef::new(Ideas::Id).uuid().not_null().primary_key())
                     .col(ColumnDef::new(Ideas::AuthorId).uuid().not_null())
-                    .col(
-                        ColumnDef::new(Ideas::Title)
-                            .string_len(200)
-                            .not_null(),
-                    )
-                    .col(
-                        ColumnDef::new(Ideas::Summary)
-                            .string_len(500)
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(Ideas::Title).string_len(200).not_null())
+                    .col(ColumnDef::new(Ideas::Summary).string_len(500).not_null())
                     .col(ColumnDef::new(Ideas::Description).text().not_null())
                     .col(
                         ColumnDef::new(Ideas::Maturity)

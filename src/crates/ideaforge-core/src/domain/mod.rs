@@ -1,18 +1,18 @@
 // MVP domain modules
-pub mod idea;
-pub mod user;
-pub mod team;
-pub mod contribution;
 pub mod category;
+pub mod contribution;
+pub mod idea;
 pub mod notification;
+pub mod team;
+pub mod user;
 
 // Re-export MVP types at module level
-pub use idea::*;
-pub use user::*;
-pub use team::*;
-pub use contribution::*;
 pub use category::*;
+pub use contribution::*;
+pub use idea::*;
 pub use notification::*;
+pub use team::*;
+pub use user::*;
 
 // =============================================================================
 // DEFERRED modules (Phase 2+)

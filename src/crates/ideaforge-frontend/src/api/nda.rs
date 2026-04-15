@@ -5,7 +5,10 @@ pub async fn get_nda_template(idea_id: &str) -> Result<NdaTemplateResponse, clie
     client::get(&format!("/api/v1/ideas/{idea_id}/nda/template")).await
 }
 
-pub async fn sign_nda(idea_id: &str, signer_name: &str) -> Result<NdaStatusResponse, client::ApiError> {
+pub async fn sign_nda(
+    idea_id: &str,
+    signer_name: &str,
+) -> Result<NdaStatusResponse, client::ApiError> {
     let req = SignNdaRequest {
         signer_name: signer_name.to_string(),
     };

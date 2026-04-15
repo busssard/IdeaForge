@@ -29,10 +29,7 @@ impl<'a> BotEndorsementRepository<'a> {
         model.insert(self.db).await
     }
 
-    pub async fn list_for_idea(
-        &self,
-        idea_id: Uuid,
-    ) -> Result<Vec<bot_endorsement::Model>, DbErr> {
+    pub async fn list_for_idea(&self, idea_id: Uuid) -> Result<Vec<bot_endorsement::Model>, DbErr> {
         bot_endorsement::Entity::find()
             .filter(bot_endorsement::Column::IdeaId.eq(idea_id))
             .order_by_desc(bot_endorsement::Column::CreatedAt)

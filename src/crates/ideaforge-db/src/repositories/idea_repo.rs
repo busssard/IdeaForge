@@ -87,10 +87,11 @@ impl<'a> IdeaRepository<'a> {
         // Member- and comment-count sorts are scalar subqueries against the
         // respective join tables. SeaORM's fluent API can't express these
         // directly, so we drop down to a raw `Expr::cust`.
-        let members_subq =
-            sea_orm::sea_query::Expr::cust("(SELECT COUNT(*) FROM team_members tm WHERE tm.idea_id = ideas.id)");
+        let members_subq = sea_orm::sea_query::Expr::cust(
+            "(SELECT COUNT(*) FROM team_members tm WHERE tm.idea_id = ideas.id)",
+        );
         let comments_subq = sea_orm::sea_query::Expr::cust(
-            "(SELECT COUNT(*) FROM contributions c WHERE c.idea_id = ideas.id AND c.contribution_type = 'comment')"
+            "(SELECT COUNT(*) FROM contributions c WHERE c.idea_id = ideas.id AND c.contribution_type = 'comment')",
         );
 
         query = match sort {

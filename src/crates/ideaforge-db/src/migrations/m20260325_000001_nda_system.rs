@@ -18,8 +18,18 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(NdaTemplates::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(NdaTemplates::Id).uuid().not_null().primary_key())
-                    .col(ColumnDef::new(NdaTemplates::IdeaId).uuid().not_null().unique_key())
+                    .col(
+                        ColumnDef::new(NdaTemplates::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(NdaTemplates::IdeaId)
+                            .uuid()
+                            .not_null()
+                            .unique_key(),
+                    )
                     .col(
                         ColumnDef::new(NdaTemplates::Title)
                             .string_len(255)
@@ -70,12 +80,29 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(NdaSignatures::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(NdaSignatures::Id).uuid().not_null().primary_key())
-                    .col(ColumnDef::new(NdaSignatures::NdaTemplateId).uuid().not_null())
+                    .col(
+                        ColumnDef::new(NdaSignatures::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(NdaSignatures::NdaTemplateId)
+                            .uuid()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(NdaSignatures::IdeaId).uuid().not_null())
                     .col(ColumnDef::new(NdaSignatures::SignerId).uuid().not_null())
-                    .col(ColumnDef::new(NdaSignatures::SignerName).string_len(255).not_null())
-                    .col(ColumnDef::new(NdaSignatures::SignerEmail).string_len(255).not_null())
+                    .col(
+                        ColumnDef::new(NdaSignatures::SignerName)
+                            .string_len(255)
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(NdaSignatures::SignerEmail)
+                            .string_len(255)
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(NdaSignatures::IpAddress).string_len(45))
                     .col(
                         ColumnDef::new(NdaSignatures::SignedAt)
@@ -145,19 +172,31 @@ impl MigrationTrait for Migration {
             .await?;
 
         // --- 6. Extend notification_kind enum with 'nda_signed' ---
-        conn.execute_unprepared("ALTER TYPE notification_kind ADD VALUE IF NOT EXISTS 'nda_signed'")
-            .await?;
+        conn.execute_unprepared(
+            "ALTER TYPE notification_kind ADD VALUE IF NOT EXISTS 'nda_signed'",
+        )
+        .await?;
 
         Ok(())
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(NdaSignatures::Table).if_exists().to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(NdaSignatures::Table)
+                    .if_exists()
+                    .to_owned(),
+            )
             .await?;
 
         manager
-            .drop_table(Table::drop().table(NdaTemplates::Table).if_exists().to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(NdaTemplates::Table)
+                    .if_exists()
+                    .to_owned(),
+            )
             .await?;
 
         // Note: Cannot remove enum values in PostgreSQL, only drop+recreate

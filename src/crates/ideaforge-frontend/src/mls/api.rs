@@ -2,7 +2,7 @@
 //! over the wire as base64 strings so the backend never needs to know the
 //! transport representation of MLS primitives.
 
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::{Deserialize, Serialize};
 
 use crate::api::client::{self, ApiError};

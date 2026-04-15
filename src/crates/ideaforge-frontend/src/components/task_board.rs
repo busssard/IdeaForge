@@ -224,9 +224,10 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
     let render_card = move |task: TaskResponse, status: &'static str| {
         let priority_class = format!("priority-badge priority-{}", task.priority);
         let desc = task.description.clone();
-        let due = task.due_date.clone().map(|d| {
-            d.split('T').next().unwrap_or("").to_string()
-        });
+        let due = task
+            .due_date
+            .clone()
+            .map(|d| d.split('T').next().unwrap_or("").to_string());
         let tags = task.skill_tags.clone();
         let task_id = task.id.clone();
         let task_id_del = task.id.clone();

@@ -49,8 +49,13 @@ pub struct DerivedKeys {
 }
 
 fn argon2() -> Result<Argon2<'static>, CryptoError> {
-    let params = Params::new(ARGON2_MEM_KIB, ARGON2_T_COST, ARGON2_P_COST, Some(OUTPUT_LEN))
-        .map_err(|e| CryptoError::Params(e.to_string()))?;
+    let params = Params::new(
+        ARGON2_MEM_KIB,
+        ARGON2_T_COST,
+        ARGON2_P_COST,
+        Some(OUTPUT_LEN),
+    )
+    .map_err(|e| CryptoError::Params(e.to_string()))?;
     Ok(Argon2::new(Algorithm::Argon2id, Version::V0x13, params))
 }
 
@@ -98,8 +103,8 @@ pub fn fresh_salt() -> [u8; SALT_LEN] {
 /// ciphertext implicitly).
 pub fn seal(wrap_key: &[u8; OUTPUT_LEN], plaintext: &[u8]) -> Result<Vec<u8>, CryptoError> {
     use rand::RngCore;
-    let cipher = Aes256Gcm::new_from_slice(wrap_key)
-        .map_err(|e| CryptoError::Aead(format!("key: {e}")))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(wrap_key).map_err(|e| CryptoError::Aead(format!("key: {e}")))?;
     let mut nonce_bytes = [0u8; NONCE_LEN];
     rand::thread_rng().fill_bytes(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
@@ -118,8 +123,8 @@ pub fn open(wrap_key: &[u8; OUTPUT_LEN], wrapped: &[u8]) -> Result<Vec<u8>, Cryp
     if wrapped.len() < NONCE_LEN + 16 {
         return Err(CryptoError::ShortCiphertext);
     }
-    let cipher = Aes256Gcm::new_from_slice(wrap_key)
-        .map_err(|e| CryptoError::Aead(format!("key: {e}")))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(wrap_key).map_err(|e| CryptoError::Aead(format!("key: {e}")))?;
     let (nonce_bytes, ct) = wrapped.split_at(NONCE_LEN);
     let nonce = Nonce::from_slice(nonce_bytes);
     cipher

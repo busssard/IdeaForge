@@ -6,9 +6,8 @@ pub async fn list_notifications(
     per_page: u64,
     unread_only: bool,
 ) -> Result<NotificationListResponse, client::ApiError> {
-    let url = format!(
-        "/api/v1/notifications?page={page}&per_page={per_page}&unread_only={unread_only}"
-    );
+    let url =
+        format!("/api/v1/notifications?page={page}&per_page={per_page}&unread_only={unread_only}");
     client::get(&url).await
 }
 
@@ -27,10 +26,7 @@ pub async fn mark_read(id: &str) -> Result<(), client::ApiError> {
 }
 
 pub async fn mark_all_read() -> Result<(), client::ApiError> {
-    let _: serde_json::Value = client::put(
-        "/api/v1/notifications/read-all",
-        &serde_json::json!({}),
-    )
-    .await?;
+    let _: serde_json::Value =
+        client::put("/api/v1/notifications/read-all", &serde_json::json!({})).await?;
     Ok(())
 }

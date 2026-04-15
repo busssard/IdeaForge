@@ -13,11 +13,11 @@
 //! making per-guess cost non-trivial even if the DB leaks.
 
 use axum::{
+    Json, Router,
     extract::State,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
 use chrono::{DateTime, Duration, FixedOffset, Utc};
 use sea_orm::{ActiveModelTrait, EntityTrait, Set};
@@ -40,12 +40,12 @@ pub fn routes() -> Router<AppState> {
 }
 
 fn b64(bytes: &[u8]) -> String {
-    use base64::{engine::general_purpose::STANDARD, Engine};
+    use base64::{Engine, engine::general_purpose::STANDARD};
     STANDARD.encode(bytes)
 }
 
 fn unb64(s: &str) -> Result<Vec<u8>, (StatusCode, Json<serde_json::Value>)> {
-    use base64::{engine::general_purpose::STANDARD, Engine};
+    use base64::{Engine, engine::general_purpose::STANDARD};
     STANDARD.decode(s).map_err(|_| {
         (
             StatusCode::BAD_REQUEST,
@@ -155,8 +155,12 @@ async fn setup_keystore(
         Ok(None) => {}
         Err(e) => {
             tracing::error!("keystore lookup failed: {e}");
-            return err(StatusCode::INTERNAL_SERVER_ERROR, "DB_ERROR", "Lookup failed")
-                .into_response();
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "DB_ERROR",
+                "Lookup failed",
+            )
+            .into_response();
         }
     }
 
@@ -172,12 +176,15 @@ async fn setup_keystore(
         locked_until: Set(None),
     };
     match model.insert(db).await {
-        Ok(_) => (StatusCode::CREATED, Json(serde_json::json!({ "ok": true })))
-            .into_response(),
+        Ok(_) => (StatusCode::CREATED, Json(serde_json::json!({ "ok": true }))).into_response(),
         Err(e) => {
             tracing::error!("keystore insert failed: {e}");
-            err(StatusCode::INTERNAL_SERVER_ERROR, "DB_ERROR", "Insert failed")
-                .into_response()
+            err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "DB_ERROR",
+                "Insert failed",
+            )
+            .into_response()
         }
     }
 }
@@ -217,8 +224,12 @@ async fn update_keystore(
         }
         Err(e) => {
             tracing::error!("keystore lookup failed: {e}");
-            return err(StatusCode::INTERNAL_SERVER_ERROR, "DB_ERROR", "Lookup failed")
-                .into_response();
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "DB_ERROR",
+                "Lookup failed",
+            )
+            .into_response();
         }
     };
 
@@ -235,15 +246,17 @@ async fn update_keystore(
         Ok(_) => Json(serde_json::json!({ "ok": true })).into_response(),
         Err(e) => {
             tracing::error!("keystore update failed: {e}");
-            err(StatusCode::INTERNAL_SERVER_ERROR, "DB_ERROR", "Update failed").into_response()
+            err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "DB_ERROR",
+                "Update failed",
+            )
+            .into_response()
         }
     }
 }
 
-async fn keystore_status(
-    State(state): State<AppState>,
-    auth: AuthUser,
-) -> impl IntoResponse {
+async fn keystore_status(State(state): State<AppState>, auth: AuthUser) -> impl IntoResponse {
     let db = state.db.connection();
     match mls_keystore::Entity::find_by_id(auth.user_id).one(db).await {
         Ok(Some(row)) => Json(StatusResponse {
@@ -262,7 +275,12 @@ async fn keystore_status(
         .into_response(),
         Err(e) => {
             tracing::error!("keystore status: {e}");
-            err(StatusCode::INTERNAL_SERVER_ERROR, "DB_ERROR", "Lookup failed").into_response()
+            err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "DB_ERROR",
+                "Lookup failed",
+            )
+            .into_response()
         }
     }
 }
@@ -281,13 +299,16 @@ async fn unlock_keystore(
     let row = match mls_keystore::Entity::find_by_id(auth.user_id).one(db).await {
         Ok(Some(r)) => r,
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NO_KEYSTORE", "No keystore set up")
-                .into_response();
+            return err(StatusCode::NOT_FOUND, "NO_KEYSTORE", "No keystore set up").into_response();
         }
         Err(e) => {
             tracing::error!("keystore lookup failed: {e}");
-            return err(StatusCode::INTERNAL_SERVER_ERROR, "DB_ERROR", "Lookup failed")
-                .into_response();
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "DB_ERROR",
+                "Lookup failed",
+            )
+            .into_response();
         }
     };
 
@@ -319,8 +340,8 @@ async fn unlock_keystore(
 
     // Wrong PIN — update rate-limit state.
     let window_start = row.first_failed_at.map(|t| t.to_utc()).unwrap_or(now);
-    let window_active = now.signed_duration_since(window_start)
-        <= Duration::minutes(LOCKOUT_WINDOW_MINUTES);
+    let window_active =
+        now.signed_duration_since(window_start) <= Duration::minutes(LOCKOUT_WINDOW_MINUTES);
 
     let mut active: mls_keystore::ActiveModel = row.clone().into();
     let (new_attempts, new_first_failed, new_locked) = if window_active {

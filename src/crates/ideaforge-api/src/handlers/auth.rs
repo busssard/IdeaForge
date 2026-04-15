@@ -1,4 +1,4 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::post, Json, Router};
+use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::post};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -54,7 +54,11 @@ pub struct ErrorBody {
     pub message: String,
 }
 
-fn error_response(status: StatusCode, code: &'static str, message: impl Into<String>) -> impl IntoResponse {
+fn error_response(
+    status: StatusCode,
+    code: &'static str,
+    message: impl Into<String>,
+) -> impl IntoResponse {
     (
         status,
         Json(ErrorJson {
@@ -129,18 +133,24 @@ async fn register(
     // Validate input
     let email = match validate_email(&body.email) {
         Ok(e) => e,
-        Err(msg) => return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response(),
+        Err(msg) => {
+            return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response();
+        }
     };
     if let Err(msg) = validate_password(&body.password) {
         return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response();
     }
     let display_name = match validate_display_name(&body.display_name) {
         Ok(n) => n,
-        Err(msg) => return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response(),
+        Err(msg) => {
+            return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response();
+        }
     };
     let role = match validate_role(body.role.as_deref()) {
         Ok(r) => r,
-        Err(msg) => return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response(),
+        Err(msg) => {
+            return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response();
+        }
     };
 
     let repo = UserRepository::new(state.db.connection());
@@ -179,7 +189,10 @@ async fn register(
 
     // Create user
     let user_id = Uuid::new_v4();
-    let user = match repo.create(user_id, &email, &password_hash, &display_name, role).await {
+    let user = match repo
+        .create(user_id, &email, &password_hash, &display_name, role)
+        .await
+    {
         Ok(u) => u,
         Err(e) => {
             tracing::error!("Database error creating user: {e}");
@@ -207,13 +220,12 @@ async fn register(
     }
 }
 
-async fn login(
-    State(state): State<AppState>,
-    Json(body): Json<LoginRequest>,
-) -> impl IntoResponse {
+async fn login(State(state): State<AppState>, Json(body): Json<LoginRequest>) -> impl IntoResponse {
     let email = match validate_email(&body.email) {
         Ok(e) => e,
-        Err(msg) => return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response(),
+        Err(msg) => {
+            return error_response(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg).into_response();
+        }
     };
 
     let repo = UserRepository::new(state.db.connection());
@@ -223,9 +235,16 @@ async fn login(
         Ok(Some(u)) => u,
         Ok(None) => {
             // Constant-time: still hash to prevent timing attacks
-            let _ = password::verify_password("dummy", "$argon2id$v=19$m=19456,t=2,p=1$dGVzdHNhbHQ$abc");
-            return error_response(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "Invalid email or password")
-                .into_response();
+            let _ = password::verify_password(
+                "dummy",
+                "$argon2id$v=19$m=19456,t=2,p=1$dGVzdHNhbHQ$abc",
+            );
+            return error_response(
+                StatusCode::UNAUTHORIZED,
+                "UNAUTHORIZED",
+                "Invalid email or password",
+            )
+            .into_response();
         }
         Err(e) => {
             tracing::error!("Database error during login: {e}");
@@ -242,8 +261,12 @@ async fn login(
     match password::verify_password(&body.password, &user.password_hash) {
         Ok(true) => {}
         Ok(false) => {
-            return error_response(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "Invalid email or password")
-                .into_response();
+            return error_response(
+                StatusCode::UNAUTHORIZED,
+                "UNAUTHORIZED",
+                "Invalid email or password",
+            )
+            .into_response();
         }
         Err(e) => {
             tracing::error!("Password verification error: {e}");
@@ -279,8 +302,12 @@ async fn refresh(
     let claims = match state.jwt.validate_token(&body.refresh_token) {
         Ok(c) => c,
         Err(_) => {
-            return error_response(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "Invalid or expired refresh token")
-                .into_response();
+            return error_response(
+                StatusCode::UNAUTHORIZED,
+                "UNAUTHORIZED",
+                "Invalid or expired refresh token",
+            )
+            .into_response();
         }
     };
 

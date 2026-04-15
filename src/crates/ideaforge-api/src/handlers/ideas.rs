@@ -1,9 +1,9 @@
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -27,7 +27,10 @@ pub fn routes() -> Router<AppState> {
         .route("/:id", get(get_idea).put(update_idea).delete(archive_idea))
         .route("/:id/stokes", get(list_stokes).post(stoke_idea))
         .route("/:id/stokes/mine", delete(withdraw_stoke))
-        .route("/:id/contributions", get(list_contributions).post(create_contribution))
+        .route(
+            "/:id/contributions",
+            get(list_contributions).post(create_contribution),
+        )
 }
 
 // --- DTOs ---
@@ -197,7 +200,12 @@ async fn fetch_author_map(
     ideas: &[ideaforge_db::entities::idea::Model],
 ) -> std::collections::HashMap<Uuid, (String, Option<String>)> {
     use ideaforge_db::entities::user;
-    let author_ids: Vec<Uuid> = ideas.iter().map(|i| i.author_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
+    let author_ids: Vec<Uuid> = ideas
+        .iter()
+        .map(|i| i.author_id)
+        .collect::<std::collections::HashSet<_>>()
+        .into_iter()
+        .collect();
     if author_ids.is_empty() {
         return std::collections::HashMap::new();
     }
@@ -218,8 +226,7 @@ async fn fetch_author_map(
 }
 
 /// NDA redaction placeholder for descriptions behind NDA protection.
-const NDA_REDACTION_MESSAGE: &str =
-    "[NDA Required] Sign the NDA to view the full pitch.";
+const NDA_REDACTION_MESSAGE: &str = "[NDA Required] Sign the NDA to view the full pitch.";
 
 /// Redaction placeholder for commercial ideas when the user is not authenticated.
 const COMMERCIAL_REDACTION_MESSAGE: &str =
@@ -247,16 +254,25 @@ async fn list_ideas(
     let page = params.page.unwrap_or(1).max(1);
     let per_page = params.per_page.unwrap_or(20).clamp(1, 100);
 
-    let maturity_filter = params.maturity.as_deref().and_then(IdeaMaturity::from_str_opt);
-    let openness_filter = params.openness.as_deref().and_then(IdeaOpenness::from_str_opt);
+    let maturity_filter = params
+        .maturity
+        .as_deref()
+        .and_then(IdeaMaturity::from_str_opt);
+    let openness_filter = params
+        .openness
+        .as_deref()
+        .and_then(IdeaOpenness::from_str_opt);
     let lifecycle_filter = params
         .lifecycle
         .as_deref()
         .and_then(ideaforge_db::entities::enums::IdeaLifecycle::from_str_opt);
 
     // Exclude private ideas from public listing unless viewing own ideas
-    let exclude_private = params.author_id.is_none() ||
-        opt_auth.0.as_ref().map_or(true, |auth| Some(auth.user_id) != params.author_id);
+    let exclude_private = params.author_id.is_none()
+        || opt_auth
+            .0
+            .as_ref()
+            .map_or(true, |auth| Some(auth.user_id) != params.author_id);
 
     let repo = IdeaRepository::new(state.db.connection());
     match repo
@@ -285,7 +301,10 @@ async fn list_ideas(
                         .all(state.db.connection())
                         .await
                     {
-                        Ok(stokes) => stokes.iter().map(|s| s.idea_id).collect::<std::collections::HashSet<_>>(),
+                        Ok(stokes) => stokes
+                            .iter()
+                            .map(|s| s.idea_id)
+                            .collect::<std::collections::HashSet<_>>(),
                         Err(e) => {
                             tracing::warn!("Failed to check user stokes: {e}");
                             std::collections::HashSet::new()
@@ -313,7 +332,10 @@ async fn list_ideas(
                         .all(state.db.connection())
                         .await
                     {
-                        Ok(sigs) => sigs.iter().map(|s| s.idea_id).collect::<std::collections::HashSet<_>>(),
+                        Ok(sigs) => sigs
+                            .iter()
+                            .map(|s| s.idea_id)
+                            .collect::<std::collections::HashSet<_>>(),
                         Err(e) => {
                             tracing::warn!("Failed to check NDA signatures: {e}");
                             std::collections::HashSet::new()
@@ -331,7 +353,11 @@ async fn list_ideas(
             // Batch-fetch author names/avatars
             let author_map = fetch_author_map(state.db.connection(), &ideas).await;
 
-            let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
+            let total_pages = if total == 0 {
+                0
+            } else {
+                (total + per_page - 1) / per_page
+            };
             Json(IdeaListResponse {
                 data: ideas
                     .iter()
@@ -498,7 +524,18 @@ async fn create_idea(
                 .flatten();
             let author_name = author.as_ref().map_or("Unknown", |u| &u.display_name);
             let author_avatar = author.as_ref().and_then(|u| u.avatar_url.as_deref());
-            (StatusCode::CREATED, Json(idea_response(&idea, false, is_nda, false, author_name, author_avatar))).into_response()
+            (
+                StatusCode::CREATED,
+                Json(idea_response(
+                    &idea,
+                    false,
+                    is_nda,
+                    false,
+                    author_name,
+                    author_avatar,
+                )),
+            )
+                .into_response()
         }
         Err(e) => {
             tracing::error!("Failed to create idea: {e}");
@@ -555,12 +592,8 @@ async fn get_idea(
                             }
                         }
                     } else {
-                        return err(
-                            StatusCode::FORBIDDEN,
-                            "FORBIDDEN",
-                            "This idea is private",
-                        )
-                        .into_response();
+                        return err(StatusCode::FORBIDDEN, "FORBIDDEN", "This idea is private")
+                            .into_response();
                     }
                 }
             }
@@ -606,13 +639,17 @@ async fn get_idea(
                     // Check NDA signature
                     if let OptionalAuth(Some(ref auth)) = opt_auth {
                         let sig_repo = NdaSignatureRepository::new(state.db.connection());
-                        nda_signed = sig_repo
-                            .has_signed(auth.user_id, id)
-                            .await
-                            .unwrap_or(false);
+                        nda_signed = sig_repo.has_signed(auth.user_id, id).await.unwrap_or(false);
                     }
                     if !nda_signed {
-                        let mut resp = idea_response(&idea, has_stoked, true, false, author_name, author_avatar);
+                        let mut resp = idea_response(
+                            &idea,
+                            has_stoked,
+                            true,
+                            false,
+                            author_name,
+                            author_avatar,
+                        );
                         resp.description = NDA_REDACTION_MESSAGE.to_string();
                         return Json(resp).into_response();
                     }
@@ -627,13 +664,28 @@ async fn get_idea(
             if idea.openness == IdeaOpenness::Commercial {
                 let is_authenticated = opt_auth.0.is_some();
                 if !is_authenticated {
-                    let mut resp = idea_response(&idea, has_stoked, is_nda, nda_signed, author_name, author_avatar);
+                    let mut resp = idea_response(
+                        &idea,
+                        has_stoked,
+                        is_nda,
+                        nda_signed,
+                        author_name,
+                        author_avatar,
+                    );
                     resp.description = COMMERCIAL_REDACTION_MESSAGE.to_string();
                     return Json(resp).into_response();
                 }
             }
 
-            Json(idea_response(&idea, has_stoked, is_nda, nda_signed, author_name, author_avatar)).into_response()
+            Json(idea_response(
+                &idea,
+                has_stoked,
+                is_nda,
+                nda_signed,
+                author_name,
+                author_avatar,
+            ))
+            .into_response()
         }
         Ok(None) => err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response(),
         Err(e) => {
@@ -660,10 +712,10 @@ async fn update_idea(
     match repo.find_by_id(id).await {
         Ok(Some(idea)) if idea.author_id == auth.user_id => {}
         Ok(Some(_)) => {
-            return err(StatusCode::FORBIDDEN, "FORBIDDEN", "Not the idea owner").into_response()
+            return err(StatusCode::FORBIDDEN, "FORBIDDEN", "Not the idea owner").into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea for update: {e}");
@@ -739,7 +791,15 @@ async fn update_idea(
                 .flatten();
             let author_name = author.as_ref().map_or("Unknown", |u| &u.display_name);
             let author_avatar = author.as_ref().and_then(|u| u.avatar_url.as_deref());
-            Json(idea_response(&idea, false, is_nda, is_nda, author_name, author_avatar)).into_response()
+            Json(idea_response(
+                &idea,
+                false,
+                is_nda,
+                is_nda,
+                author_name,
+                author_avatar,
+            ))
+            .into_response()
         }
         Err(e) => {
             tracing::error!("Failed to update idea: {e}");
@@ -764,10 +824,10 @@ async fn archive_idea(
     match repo.find_by_id(id).await {
         Ok(Some(idea)) if idea.author_id == auth.user_id => {}
         Ok(Some(_)) => {
-            return err(StatusCode::FORBIDDEN, "FORBIDDEN", "Not the idea owner").into_response()
+            return err(StatusCode::FORBIDDEN, "FORBIDDEN", "Not the idea owner").into_response();
         }
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea for archive: {e}");
@@ -807,7 +867,11 @@ async fn list_stokes(
     let repo = StokeRepository::new(state.db.connection());
     match repo.list_for_idea(id, page, per_page).await {
         Ok((stokes, total)) => {
-            let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
+            let total_pages = if total == 0 {
+                0
+            } else {
+                (total + per_page - 1) / per_page
+            };
             Json(StokeListResponse {
                 data: stokes
                     .iter()
@@ -849,7 +913,8 @@ async fn stoke_idea(
     // Check if already stoked
     match stoke_repo.exists(auth.user_id, id).await {
         Ok(true) => {
-            return err(StatusCode::CONFLICT, "CONFLICT", "Already stoked this idea").into_response()
+            return err(StatusCode::CONFLICT, "CONFLICT", "Already stoked this idea")
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Failed to check stoke existence: {e}");
@@ -867,7 +932,7 @@ async fn stoke_idea(
     let idea_repo = IdeaRepository::new(state.db.connection());
     match idea_repo.find_by_id(id).await {
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea for stoke: {e}");
@@ -1000,7 +1065,7 @@ async fn create_contribution(
     let idea_repo = IdeaRepository::new(state.db.connection());
     match idea_repo.find_by_id(id).await {
         Ok(None) => {
-            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response()
+            return err(StatusCode::NOT_FOUND, "NOT_FOUND", "Idea not found").into_response();
         }
         Err(e) => {
             tracing::error!("Failed to find idea for contribution: {e}");
@@ -1066,7 +1131,11 @@ async fn list_contributions(
     let repo = ContributionRepository::new(state.db.connection());
     match repo.list_for_idea(id, type_filter, page, per_page).await {
         Ok((contributions, total)) => {
-            let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
+            let total_pages = if total == 0 {
+                0
+            } else {
+                (total + per_page - 1) / per_page
+            };
             Json(ContributionListResponse {
                 data: contributions
                     .iter()
@@ -1192,7 +1261,10 @@ async fn list_my_stoked_ideas(
             .all(state.db.connection())
             .await
         {
-            Ok(sigs) => sigs.iter().map(|s| s.idea_id).collect::<std::collections::HashSet<_>>(),
+            Ok(sigs) => sigs
+                .iter()
+                .map(|s| s.idea_id)
+                .collect::<std::collections::HashSet<_>>(),
             Err(e) => {
                 tracing::warn!("Failed to check NDA signatures for stoked ideas: {e}");
                 std::collections::HashSet::new()
@@ -1205,7 +1277,11 @@ async fn list_my_stoked_ideas(
     // Batch-fetch author names/avatars
     let author_map = fetch_author_map(state.db.connection(), &ideas).await;
 
-    let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
+    let total_pages = if total == 0 {
+        0
+    } else {
+        (total + per_page - 1) / per_page
+    };
     Json(IdeaListResponse {
         data: ideas
             .iter()
@@ -1217,7 +1293,14 @@ async fn list_my_stoked_ideas(
                     .get(&i.author_id)
                     .map(|(n, a)| (n.as_str(), a.as_deref()))
                     .unwrap_or(("Unknown", None));
-                let mut resp = idea_response(i, true, is_nda, nda_signed || is_author, author_name, author_avatar);
+                let mut resp = idea_response(
+                    i,
+                    true,
+                    is_nda,
+                    nda_signed || is_author,
+                    author_name,
+                    author_avatar,
+                );
                 if is_nda && !is_author && !nda_signed {
                     resp.description = NDA_REDACTION_MESSAGE.to_string();
                 }

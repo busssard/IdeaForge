@@ -3,9 +3,7 @@ use leptos::prelude::*;
 /// Anvil + lightbulb forge mark. Inlined SVG so `color` CSS cascades to `fill`.
 /// Authored in Inkscape; kept as a single filled path for a flat 2D silhouette feel.
 #[component]
-pub fn ForgeLogo(
-    #[prop(optional, into)] class: String,
-) -> impl IntoView {
+pub fn ForgeLogo(#[prop(optional, into)] class: String) -> impl IntoView {
     view! {
         <svg
             class=if class.is_empty() { "forge-logo".to_string() } else { format!("forge-logo {class}") }

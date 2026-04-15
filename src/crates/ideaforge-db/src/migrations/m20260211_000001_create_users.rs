@@ -35,9 +35,7 @@ impl MigrationTrait for Migration {
                             .string_len(100)
                             .not_null(),
                     )
-                    .col(
-                        ColumnDef::new(Users::Bio).text().not_null().default(""),
-                    )
+                    .col(ColumnDef::new(Users::Bio).text().not_null().default(""))
                     .col(ColumnDef::new(Users::AvatarUrl).string_len(500))
                     .col(
                         ColumnDef::new(Users::Role)

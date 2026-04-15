@@ -10,18 +10,21 @@ impl MigrationTrait for Migration {
 
         // --- 1. Add role_label column to team_members ---
         conn.execute_unprepared(
-            "ALTER TABLE team_members ADD COLUMN IF NOT EXISTS role_label VARCHAR(100)"
-        ).await?;
+            "ALTER TABLE team_members ADD COLUMN IF NOT EXISTS role_label VARCHAR(100)",
+        )
+        .await?;
 
         // --- 2. Create task_status enum ---
         conn.execute_unprepared(
-            "CREATE TYPE task_status AS ENUM ('open', 'assigned', 'in_review', 'done')"
-        ).await?;
+            "CREATE TYPE task_status AS ENUM ('open', 'assigned', 'in_review', 'done')",
+        )
+        .await?;
 
         // --- 3. Create task_priority enum ---
         conn.execute_unprepared(
-            "CREATE TYPE task_priority AS ENUM ('low', 'normal', 'high', 'urgent')"
-        ).await?;
+            "CREATE TYPE task_priority AS ENUM ('low', 'normal', 'high', 'urgent')",
+        )
+        .await?;
 
         // --- 4. Create board_tasks table ---
         manager
@@ -29,13 +32,14 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(BoardTasks::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(BoardTasks::Id).uuid().not_null().primary_key())
-                    .col(ColumnDef::new(BoardTasks::IdeaId).uuid().not_null())
                     .col(
-                        ColumnDef::new(BoardTasks::Title)
-                            .string_len(255)
-                            .not_null(),
+                        ColumnDef::new(BoardTasks::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
                     )
+                    .col(ColumnDef::new(BoardTasks::IdeaId).uuid().not_null())
+                    .col(ColumnDef::new(BoardTasks::Title).string_len(255).not_null())
                     .col(ColumnDef::new(BoardTasks::Description).text())
                     .col(
                         ColumnDef::new(BoardTasks::Status)
@@ -141,15 +145,21 @@ impl MigrationTrait for Migration {
 
         // Drop in reverse order
         manager
-            .drop_table(Table::drop().table(BoardTasks::Table).if_exists().to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(BoardTasks::Table)
+                    .if_exists()
+                    .to_owned(),
+            )
             .await?;
 
-        conn.execute_unprepared("DROP TYPE IF EXISTS task_priority").await?;
-        conn.execute_unprepared("DROP TYPE IF EXISTS task_status").await?;
+        conn.execute_unprepared("DROP TYPE IF EXISTS task_priority")
+            .await?;
+        conn.execute_unprepared("DROP TYPE IF EXISTS task_status")
+            .await?;
 
-        conn.execute_unprepared(
-            "ALTER TABLE team_members DROP COLUMN IF EXISTS role_label"
-        ).await?;
+        conn.execute_unprepared("ALTER TABLE team_members DROP COLUMN IF EXISTS role_label")
+            .await?;
 
         Ok(())
     }

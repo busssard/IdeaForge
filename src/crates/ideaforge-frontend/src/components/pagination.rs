@@ -53,5 +53,6 @@ pub fn Pagination(
                 "Next"
             </button>
         </div>
-    }.into_any()
+    }
+    .into_any()
 }

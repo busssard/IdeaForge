@@ -1,9 +1,9 @@
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, put},
-    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -101,9 +101,16 @@ async fn list_notifications(
     let unread_only = params.unread_only.unwrap_or(false);
 
     let repo = NotificationRepository::new(state.db.connection());
-    match repo.list_for_user(auth.user_id, unread_only, page, per_page).await {
+    match repo
+        .list_for_user(auth.user_id, unread_only, page, per_page)
+        .await
+    {
         Ok((notifications, total)) => {
-            let total_pages = if total == 0 { 0 } else { (total + per_page - 1) / per_page };
+            let total_pages = if total == 0 {
+                0
+            } else {
+                (total + per_page - 1) / per_page
+            };
             Json(NotificationListResponse {
                 data: notifications.iter().map(notification_response).collect(),
                 meta: PaginationMeta {
@@ -152,13 +159,13 @@ async fn mark_read(
 }
 
 /// PUT /api/v1/notifications/read-all - Mark all notifications as read.
-async fn read_all(
-    State(state): State<AppState>,
-    auth: AuthUser,
-) -> impl IntoResponse {
+async fn read_all(State(state): State<AppState>, auth: AuthUser) -> impl IntoResponse {
     let repo = NotificationRepository::new(state.db.connection());
     match repo.mark_all_read(auth.user_id).await {
-        Ok(count) => Json(MarkAllReadResponse { marked_count: count }).into_response(),
+        Ok(count) => Json(MarkAllReadResponse {
+            marked_count: count,
+        })
+        .into_response(),
         Err(e) => {
             tracing::error!("Failed to mark all notifications as read: {e}");
             err(
@@ -172,13 +179,13 @@ async fn read_all(
 }
 
 /// GET /api/v1/notifications/unread-count - Get unread notification count.
-async fn unread_count(
-    State(state): State<AppState>,
-    auth: AuthUser,
-) -> impl IntoResponse {
+async fn unread_count(State(state): State<AppState>, auth: AuthUser) -> impl IntoResponse {
     let repo = NotificationRepository::new(state.db.connection());
     match repo.count_unread(auth.user_id).await {
-        Ok(count) => Json(UnreadCountResponse { unread_count: count }).into_response(),
+        Ok(count) => Json(UnreadCountResponse {
+            unread_count: count,
+        })
+        .into_response(),
         Err(e) => {
             tracing::error!("Failed to count unread notifications: {e}");
             err(

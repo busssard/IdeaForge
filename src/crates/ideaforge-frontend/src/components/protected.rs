@@ -28,10 +28,18 @@ pub fn Protected(children: Children) -> impl IntoView {
     // established (flex, grid, etc.). Switch to `display: none` to hide the
     // pre-auth content without disturbing neighbours.
     let show_content = move || {
-        if auth.is_authenticated() { "display: contents" } else { "display:none" }
+        if auth.is_authenticated() {
+            "display: contents"
+        } else {
+            "display:none"
+        }
     };
     let show_loading = move || {
-        if auth.loading.get() && !auth.is_authenticated() { "" } else { "display:none" }
+        if auth.loading.get() && !auth.is_authenticated() {
+            ""
+        } else {
+            "display:none"
+        }
     };
 
     view! {

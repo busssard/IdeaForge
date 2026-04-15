@@ -21,7 +21,10 @@ pub async fn list_ideas_full(
     sort: Option<&str>,
     author_id: Option<&str>,
 ) -> Result<IdeaListResponse, client::ApiError> {
-    list_ideas_v2(page, per_page, category, maturity, openness, None, sort, author_id).await
+    list_ideas_v2(
+        page, per_page, category, maturity, openness, None, sort, author_id,
+    )
+    .await
 }
 
 pub async fn list_ideas_v2(

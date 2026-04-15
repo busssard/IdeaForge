@@ -25,26 +25,32 @@ impl MigrationTrait for Migration {
              ADD COLUMN IF NOT EXISTS bot_api_key_hash VARCHAR(255),
              ADD COLUMN IF NOT EXISTS skills JSONB NOT NULL DEFAULT '[]'::jsonb,
              ADD COLUMN IF NOT EXISTS looking_for TEXT,
-             ADD COLUMN IF NOT EXISTS availability VARCHAR(100)"
-        ).await?;
+             ADD COLUMN IF NOT EXISTS availability VARCHAR(100)",
+        )
+        .await?;
 
         // --- 4. Add looking_for_skills to ideas ---
         conn.execute_unprepared(
             "ALTER TABLE ideas
-             ADD COLUMN IF NOT EXISTS looking_for_skills JSONB NOT NULL DEFAULT '[]'::jsonb"
-        ).await?;
+             ADD COLUMN IF NOT EXISTS looking_for_skills JSONB NOT NULL DEFAULT '[]'::jsonb",
+        )
+        .await?;
 
         // --- 5. Create invite_links table ---
-        conn.execute_unprepared(
-            "CREATE TYPE invite_permission AS ENUM ('view', 'comment')"
-        ).await?;
+        conn.execute_unprepared("CREATE TYPE invite_permission AS ENUM ('view', 'comment')")
+            .await?;
 
         manager
             .create_table(
                 Table::create()
                     .table(InviteLinks::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(InviteLinks::Id).uuid().not_null().primary_key())
+                    .col(
+                        ColumnDef::new(InviteLinks::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
                     .col(ColumnDef::new(InviteLinks::IdeaId).uuid().not_null())
                     .col(
                         ColumnDef::new(InviteLinks::Token)
@@ -92,13 +98,13 @@ impl MigrationTrait for Migration {
             .await?;
 
         // --- 6. Create flags table ---
-        conn.execute_unprepared(
-            "CREATE TYPE flag_target_type AS ENUM ('idea', 'comment', 'user')"
-        ).await?;
+        conn.execute_unprepared("CREATE TYPE flag_target_type AS ENUM ('idea', 'comment', 'user')")
+            .await?;
 
         conn.execute_unprepared(
-            "CREATE TYPE flag_status AS ENUM ('pending', 'reviewed', 'dismissed')"
-        ).await?;
+            "CREATE TYPE flag_status AS ENUM ('pending', 'reviewed', 'dismissed')",
+        )
+        .await?;
 
         manager
             .create_table(
@@ -144,7 +150,12 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(BotEndorsements::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(BotEndorsements::Id).uuid().not_null().primary_key())
+                    .col(
+                        ColumnDef::new(BotEndorsements::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
                     .col(ColumnDef::new(BotEndorsements::IdeaId).uuid().not_null())
                     .col(ColumnDef::new(BotEndorsements::BotId).uuid().not_null())
                     .col(ColumnDef::new(BotEndorsements::Reason).text().not_null())
@@ -204,20 +215,26 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Notifications::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(Notifications::Id).uuid().not_null().primary_key())
+                    .col(
+                        ColumnDef::new(Notifications::Id)
+                            .uuid()
+                            .not_null()
+                            .primary_key(),
+                    )
                     .col(ColumnDef::new(Notifications::UserId).uuid().not_null())
                     .col(
                         ColumnDef::new(Notifications::Kind)
                             .custom(Alias::new("notification_kind"))
                             .not_null(),
                     )
-                    .col(ColumnDef::new(Notifications::Title).string_len(255).not_null())
+                    .col(
+                        ColumnDef::new(Notifications::Title)
+                            .string_len(255)
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(Notifications::Message).text().not_null())
                     .col(ColumnDef::new(Notifications::LinkUrl).string_len(500))
-                    .col(
-                        ColumnDef::new(Notifications::ReadAt)
-                            .timestamp_with_time_zone(),
-                    )
+                    .col(ColumnDef::new(Notifications::ReadAt).timestamp_with_time_zone())
                     .col(
                         ColumnDef::new(Notifications::CreatedAt)
                             .timestamp_with_time_zone()
@@ -249,17 +266,18 @@ impl MigrationTrait for Migration {
         // --- 9. Add is_bot flag to contributions ---
         conn.execute_unprepared(
             "ALTER TABLE contributions
-             ADD COLUMN IF NOT EXISTS is_bot BOOLEAN NOT NULL DEFAULT false"
-        ).await?;
+             ADD COLUMN IF NOT EXISTS is_bot BOOLEAN NOT NULL DEFAULT false",
+        )
+        .await?;
 
         // --- 10. Index for user skills search ---
         conn.execute_unprepared(
-            "CREATE INDEX IF NOT EXISTS idx_users_skills ON users USING GIN (skills)"
-        ).await?;
+            "CREATE INDEX IF NOT EXISTS idx_users_skills ON users USING GIN (skills)",
+        )
+        .await?;
 
-        conn.execute_unprepared(
-            "CREATE INDEX IF NOT EXISTS idx_users_is_bot ON users (is_bot)"
-        ).await?;
+        conn.execute_unprepared("CREATE INDEX IF NOT EXISTS idx_users_is_bot ON users (is_bot)")
+            .await?;
 
         Ok(())
     }
@@ -268,31 +286,54 @@ impl MigrationTrait for Migration {
         let conn = manager.get_connection();
 
         // Drop in reverse order
-        conn.execute_unprepared("DROP INDEX IF EXISTS idx_users_is_bot").await?;
-        conn.execute_unprepared("DROP INDEX IF EXISTS idx_users_skills").await?;
-        conn.execute_unprepared("ALTER TABLE contributions DROP COLUMN IF EXISTS is_bot").await?;
-
-        manager
-            .drop_table(Table::drop().table(Notifications::Table).if_exists().to_owned())
+        conn.execute_unprepared("DROP INDEX IF EXISTS idx_users_is_bot")
             .await?;
-        conn.execute_unprepared("DROP TYPE IF EXISTS notification_kind").await?;
+        conn.execute_unprepared("DROP INDEX IF EXISTS idx_users_skills")
+            .await?;
+        conn.execute_unprepared("ALTER TABLE contributions DROP COLUMN IF EXISTS is_bot")
+            .await?;
 
         manager
-            .drop_table(Table::drop().table(BotEndorsements::Table).if_exists().to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(Notifications::Table)
+                    .if_exists()
+                    .to_owned(),
+            )
+            .await?;
+        conn.execute_unprepared("DROP TYPE IF EXISTS notification_kind")
+            .await?;
+
+        manager
+            .drop_table(
+                Table::drop()
+                    .table(BotEndorsements::Table)
+                    .if_exists()
+                    .to_owned(),
+            )
             .await?;
 
         manager
             .drop_table(Table::drop().table(Flags::Table).if_exists().to_owned())
             .await?;
-        conn.execute_unprepared("DROP TYPE IF EXISTS flag_status").await?;
-        conn.execute_unprepared("DROP TYPE IF EXISTS flag_target_type").await?;
+        conn.execute_unprepared("DROP TYPE IF EXISTS flag_status")
+            .await?;
+        conn.execute_unprepared("DROP TYPE IF EXISTS flag_target_type")
+            .await?;
 
         manager
-            .drop_table(Table::drop().table(InviteLinks::Table).if_exists().to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(InviteLinks::Table)
+                    .if_exists()
+                    .to_owned(),
+            )
             .await?;
-        conn.execute_unprepared("DROP TYPE IF EXISTS invite_permission").await?;
+        conn.execute_unprepared("DROP TYPE IF EXISTS invite_permission")
+            .await?;
 
-        conn.execute_unprepared("ALTER TABLE ideas DROP COLUMN IF EXISTS looking_for_skills").await?;
+        conn.execute_unprepared("ALTER TABLE ideas DROP COLUMN IF EXISTS looking_for_skills")
+            .await?;
 
         conn.execute_unprepared(
             "ALTER TABLE users
@@ -302,8 +343,9 @@ impl MigrationTrait for Migration {
              DROP COLUMN IF EXISTS bot_api_key_hash,
              DROP COLUMN IF EXISTS skills,
              DROP COLUMN IF EXISTS looking_for,
-             DROP COLUMN IF EXISTS availability"
-        ).await?;
+             DROP COLUMN IF EXISTS availability",
+        )
+        .await?;
 
         // Note: Cannot remove enum values in PostgreSQL, only drop+recreate
         // For development, this is acceptable

@@ -7,9 +7,7 @@ pub async fn list_contributions(
     page: u64,
     per_page: u64,
 ) -> Result<ContributionListResponse, client::ApiError> {
-    let mut url = format!(
-        "/api/v1/ideas/{idea_id}/contributions?page={page}&per_page={per_page}"
-    );
+    let mut url = format!("/api/v1/ideas/{idea_id}/contributions?page={page}&per_page={per_page}");
     if let Some(t) = contribution_type {
         url.push_str(&format!("&type={t}"));
     }

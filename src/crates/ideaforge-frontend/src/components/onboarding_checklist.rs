@@ -15,7 +15,9 @@ pub fn OnboardingChecklist() -> impl IntoView {
     let location = use_location();
 
     let has_profile = Signal::derive(move || {
-        auth.user.get().map_or(false, |u| !u.display_name.is_empty())
+        auth.user
+            .get()
+            .map_or(false, |u| !u.display_name.is_empty())
     });
 
     let has_idea = RwSignal::new(false);
@@ -35,7 +37,9 @@ pub fn OnboardingChecklist() -> impl IntoView {
         }
         let user_id_for_ideas = user_id.clone();
         wasm_bindgen_futures::spawn_local(async move {
-            if let Ok(resp) = api::ideas::list_ideas(1, 1, None, None, None, Some(&user_id_for_ideas)).await {
+            if let Ok(resp) =
+                api::ideas::list_ideas(1, 1, None, None, None, Some(&user_id_for_ideas)).await
+            {
                 has_idea.set(resp.meta.total > 0);
             }
             if let Ok(resp) = api::ideas::list_my_stoked_ideas(1, 1).await {
@@ -131,9 +135,7 @@ fn is_dismissed() -> bool {
 }
 
 fn set_dismissed() {
-    if let Some(storage) = web_sys::window()
-        .and_then(|w| w.local_storage().ok().flatten())
-    {
+    if let Some(storage) = web_sys::window().and_then(|w| w.local_storage().ok().flatten()) {
         let _ = storage.set_item("ideaforge_onboarding_dismissed", "true");
     }
 }
@@ -141,14 +143,16 @@ fn set_dismissed() {
 fn is_dismissed_forever() -> bool {
     web_sys::window()
         .and_then(|w| w.local_storage().ok().flatten())
-        .and_then(|s| s.get_item("ideaforge_onboarding_dismissed_forever").ok().flatten())
+        .and_then(|s| {
+            s.get_item("ideaforge_onboarding_dismissed_forever")
+                .ok()
+                .flatten()
+        })
         .map_or(false, |v| v == "true")
 }
 
 fn set_dismissed_forever() {
-    if let Some(storage) = web_sys::window()
-        .and_then(|w| w.local_storage().ok().flatten())
-    {
+    if let Some(storage) = web_sys::window().and_then(|w| w.local_storage().ok().flatten()) {
         let _ = storage.set_item("ideaforge_onboarding_dismissed_forever", "true");
     }
 }

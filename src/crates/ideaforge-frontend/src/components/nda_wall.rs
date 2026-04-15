@@ -3,10 +3,7 @@ use leptos::prelude::*;
 use crate::api;
 
 #[component]
-pub fn NdaWall(
-    idea_id: String,
-    #[prop(into)] on_signed: Callback<()>,
-) -> impl IntoView {
+pub fn NdaWall(idea_id: String, #[prop(into)] on_signed: Callback<()>) -> impl IntoView {
     let idea_id = StoredValue::new(idea_id);
 
     let signer_name = RwSignal::new(String::new());
@@ -19,9 +16,7 @@ pub fn NdaWall(
         async move { api::nda::get_nda_template(&id).await }
     });
 
-    let can_sign = move || {
-        !signer_name.get().trim().is_empty() && agreed.get() && !signing.get()
-    };
+    let can_sign = move || !signer_name.get().trim().is_empty() && agreed.get() && !signing.get();
 
     let on_submit = move |ev: web_sys::SubmitEvent| {
         ev.prevent_default();
