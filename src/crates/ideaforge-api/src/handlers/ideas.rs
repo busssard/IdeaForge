@@ -165,7 +165,7 @@ fn err(status: StatusCode, code: &str, message: &str) -> impl IntoResponse {
         .into_response()
 }
 
-fn idea_response(
+pub(crate) fn idea_response(
     m: &ideaforge_db::entities::idea::Model,
     has_stoked: bool,
     nda_required: bool,
@@ -195,7 +195,7 @@ fn idea_response(
 }
 
 /// Batch-fetch author display names and avatars for a set of ideas.
-async fn fetch_author_map(
+pub(crate) async fn fetch_author_map(
     db: &sea_orm::DatabaseConnection,
     ideas: &[ideaforge_db::entities::idea::Model],
 ) -> std::collections::HashMap<Uuid, (String, Option<String>)> {

@@ -19,6 +19,9 @@ pub fn routes() -> Router<AppState> {
         .route("/me", get(get_me).put(update_me))
         .route("/me/avatar", post(upload_avatar))
         .route("/:id", get(get_user))
+        .route("/:id/ideas", get(list_user_authored_ideas))
+        .route("/:id/contributions", get(list_user_contributions))
+        .route("/:id/stokes", get(list_user_stoked_ideas))
 }
 
 #[derive(Debug, Deserialize)]
@@ -621,4 +624,244 @@ async fn upload_avatar(
             .into_response()
         }
     }
+}
+
+// --- Per-user idea lists: authored, contributing, stoked --------------------
+//
+// These back the three clickable stat numbers on a profile. They intentionally
+// return non-archived public-ish ideas only; NDA-protected ones show up in the
+// list but the description still gets redacted by the individual idea page.
+
+#[derive(Debug, Deserialize)]
+pub struct PageQuery {
+    pub page: Option<u64>,
+    pub per_page: Option<u64>,
+}
+
+fn clamp_page(q: &PageQuery) -> (u64, u64) {
+    (
+        q.page.unwrap_or(1).max(1),
+        q.per_page.unwrap_or(20).clamp(1, 100),
+    )
+}
+
+async fn list_user_authored_ideas(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Query(q): Query<PageQuery>,
+) -> impl IntoResponse {
+    use ideaforge_db::entities::idea;
+    use sea_orm::*;
+
+    let (page, per_page) = clamp_page(&q);
+    let db = state.db.connection();
+
+    let base = idea::Entity::find()
+        .filter(idea::Column::AuthorId.eq(id))
+        .filter(idea::Column::ArchivedAt.is_null());
+
+    let total = base.clone().count(db).await.unwrap_or(0);
+    let offset = (page.saturating_sub(1)) * per_page;
+    let ideas = match base
+        .order_by_desc(idea::Column::CreatedAt)
+        .offset(offset)
+        .limit(per_page)
+        .all(db)
+        .await
+    {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("list_user_authored_ideas: {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Failed to list ideas",
+            )
+            .into_response();
+        }
+    };
+
+    render_idea_list(db, ideas, total, page, per_page).await
+}
+
+async fn list_user_contributions(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Query(q): Query<PageQuery>,
+) -> impl IntoResponse {
+    use ideaforge_db::entities::{idea, team_member};
+    use sea_orm::*;
+
+    let (page, per_page) = clamp_page(&q);
+    let db = state.db.connection();
+
+    // Ideas the user is on the team for, but excludes their own authored ideas
+    // (those are covered by the "authored" list).
+    let member_idea_ids: Vec<Uuid> = match team_member::Entity::find()
+        .filter(team_member::Column::UserId.eq(id))
+        .all(db)
+        .await
+    {
+        Ok(v) => v.into_iter().map(|m| m.idea_id).collect(),
+        Err(e) => {
+            tracing::error!("list_user_contributions (team members): {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Failed to list contributions",
+            )
+            .into_response();
+        }
+    };
+    if member_idea_ids.is_empty() {
+        return Json(crate::handlers::ideas::IdeaListResponse {
+            data: Vec::new(),
+            meta: crate::handlers::ideas::PaginationMeta {
+                total: 0,
+                page,
+                per_page,
+                total_pages: 0,
+            },
+        })
+        .into_response();
+    }
+
+    let base = idea::Entity::find()
+        .filter(idea::Column::Id.is_in(member_idea_ids))
+        .filter(idea::Column::AuthorId.ne(id))
+        .filter(idea::Column::ArchivedAt.is_null());
+    let total = base.clone().count(db).await.unwrap_or(0);
+    let offset = (page.saturating_sub(1)) * per_page;
+    let ideas = match base
+        .order_by_desc(idea::Column::UpdatedAt)
+        .offset(offset)
+        .limit(per_page)
+        .all(db)
+        .await
+    {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("list_user_contributions (ideas): {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Failed to list contributions",
+            )
+            .into_response();
+        }
+    };
+
+    render_idea_list(db, ideas, total, page, per_page).await
+}
+
+async fn list_user_stoked_ideas(
+    State(state): State<AppState>,
+    Path(id): Path<Uuid>,
+    Query(q): Query<PageQuery>,
+) -> impl IntoResponse {
+    use ideaforge_db::entities::{idea, stoke};
+    use sea_orm::*;
+
+    let (page, per_page) = clamp_page(&q);
+    let db = state.db.connection();
+
+    let stoked_ids: Vec<Uuid> = match stoke::Entity::find()
+        .filter(stoke::Column::UserId.eq(id))
+        .order_by_desc(stoke::Column::CreatedAt)
+        .all(db)
+        .await
+    {
+        Ok(v) => v.into_iter().map(|s| s.idea_id).collect(),
+        Err(e) => {
+            tracing::error!("list_user_stoked_ideas (stokes): {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Failed to list stokes",
+            )
+            .into_response();
+        }
+    };
+    if stoked_ids.is_empty() {
+        return Json(crate::handlers::ideas::IdeaListResponse {
+            data: Vec::new(),
+            meta: crate::handlers::ideas::PaginationMeta {
+                total: 0,
+                page,
+                per_page,
+                total_pages: 0,
+            },
+        })
+        .into_response();
+    }
+
+    let base = idea::Entity::find()
+        .filter(idea::Column::Id.is_in(stoked_ids))
+        .filter(idea::Column::ArchivedAt.is_null());
+    let total = base.clone().count(db).await.unwrap_or(0);
+    let offset = (page.saturating_sub(1)) * per_page;
+    let ideas = match base
+        .order_by_desc(idea::Column::UpdatedAt)
+        .offset(offset)
+        .limit(per_page)
+        .all(db)
+        .await
+    {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("list_user_stoked_ideas (ideas): {e}");
+            return err(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "Failed to list stokes",
+            )
+            .into_response();
+        }
+    };
+
+    render_idea_list(db, ideas, total, page, per_page).await
+}
+
+/// Shared tail of the three per-user list endpoints: fold model rows +
+/// author lookups into the public IdeaListResponse. has_stoked/nda_signed are
+/// left as false here — the profile lists don't need per-viewer state, and
+/// callers who do (e.g. the idea detail page) fetch from /ideas/:id directly.
+async fn render_idea_list(
+    db: &sea_orm::DatabaseConnection,
+    ideas: Vec<ideaforge_db::entities::idea::Model>,
+    total: u64,
+    page: u64,
+    per_page: u64,
+) -> axum::response::Response {
+    use ideaforge_db::entities::enums::IdeaOpenness;
+    let author_map = crate::handlers::ideas::fetch_author_map(db, &ideas).await;
+    let data: Vec<crate::handlers::ideas::IdeaResponse> = ideas
+        .iter()
+        .map(|i| {
+            let (author_name, author_avatar) = author_map
+                .get(&i.author_id)
+                .map(|(n, a)| (n.as_str(), a.as_deref()))
+                .unwrap_or(("Unknown", None));
+            let is_nda = i.openness == IdeaOpenness::NdaProtected;
+            crate::handlers::ideas::idea_response(
+                i,
+                false,
+                is_nda,
+                false,
+                author_name,
+                author_avatar,
+            )
+        })
+        .collect();
+    let total_pages = if total == 0 { 0 } else { total.div_ceil(per_page) };
+    Json(crate::handlers::ideas::IdeaListResponse {
+        data,
+        meta: crate::handlers::ideas::PaginationMeta {
+            total,
+            page,
+            per_page,
+            total_pages,
+        },
+    })
+    .into_response()
 }
