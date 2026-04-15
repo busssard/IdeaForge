@@ -130,6 +130,9 @@ pub struct UserResponse {
     pub skills: serde_json::Value,
     pub looking_for: Option<String>,
     pub availability: Option<String>,
+    #[serde(default)]
+    pub locations: serde_json::Value,
+    pub education_level: Option<String>,
     pub created_at: String,
 }
 
@@ -145,9 +148,14 @@ pub struct PublicUserResponse {
     pub looking_for: Option<String>,
     pub availability: Option<String>,
     #[serde(default)]
+    pub locations: serde_json::Value,
+    pub education_level: Option<String>,
+    #[serde(default)]
     pub idea_count: u64,
     #[serde(default)]
     pub stoke_count: u64,
+    #[serde(default)]
+    pub contribution_count: u64,
     pub created_at: String,
 }
 
@@ -169,6 +177,12 @@ pub struct UpdateMeRequest {
     pub looking_for: Option<Option<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub availability: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locations: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub education_level: Option<Option<String>>,
 }
 
 // --- Skills ---

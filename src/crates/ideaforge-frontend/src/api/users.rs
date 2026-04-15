@@ -3,7 +3,9 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 
 use super::client;
-use super::types::{PublicUserResponse, UpdateMeRequest, UserListResponse, UserResponse};
+use super::types::{
+    IdeaListResponse, PublicUserResponse, UpdateMeRequest, UserListResponse, UserResponse,
+};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct AvatarUploadResponse {
@@ -131,6 +133,39 @@ pub async fn update_me(req: UpdateMeRequest) -> Result<UserResponse, client::Api
 
 pub async fn get_user(id: &str) -> Result<PublicUserResponse, client::ApiError> {
     client::get(&format!("/api/v1/users/{id}")).await
+}
+
+pub async fn get_user_authored_ideas(
+    id: &str,
+    page: u64,
+    per_page: u64,
+) -> Result<IdeaListResponse, client::ApiError> {
+    client::get(&format!(
+        "/api/v1/users/{id}/ideas?page={page}&per_page={per_page}"
+    ))
+    .await
+}
+
+pub async fn get_user_contributions(
+    id: &str,
+    page: u64,
+    per_page: u64,
+) -> Result<IdeaListResponse, client::ApiError> {
+    client::get(&format!(
+        "/api/v1/users/{id}/contributions?page={page}&per_page={per_page}"
+    ))
+    .await
+}
+
+pub async fn get_user_stoked_ideas(
+    id: &str,
+    page: u64,
+    per_page: u64,
+) -> Result<IdeaListResponse, client::ApiError> {
+    client::get(&format!(
+        "/api/v1/users/{id}/stokes?page={page}&per_page={per_page}"
+    ))
+    .await
 }
 
 pub async fn list_users(

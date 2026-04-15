@@ -92,6 +92,9 @@ fn SettingsContent() -> impl IntoView {
                 } else {
                     Some(availability)
                 },
+                role: None,
+                locations: None,
+                education_level: None,
             };
 
             match api::users::update_me(req).await {
