@@ -17,6 +17,7 @@ mod m20260414_000002_mls_messaging;
 mod m20260414_000003_mls_keystore;
 mod m20260414_000004_message_notification;
 mod m20260414_000005_notification_related_user;
+mod m20260416_000001_profile_locations_education;
 
 pub struct Migrator;
 
@@ -41,6 +42,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20260414_000003_mls_keystore::Migration),
             Box::new(m20260414_000004_message_notification::Migration),
             Box::new(m20260414_000005_notification_related_user::Migration),
+            Box::new(m20260416_000001_profile_locations_education::Migration),
         ]
     }
 }

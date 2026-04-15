@@ -24,6 +24,10 @@ pub struct Model {
     pub skills: serde_json::Value,
     pub looking_for: Option<String>,
     pub availability: Option<String>,
+    #[sea_orm(column_type = "JsonBinary")]
+    #[serde(default)]
+    pub locations: serde_json::Value,
+    pub education_level: Option<String>,
     pub created_at: DateTimeWithTimeZone,
     pub updated_at: DateTimeWithTimeZone,
 }

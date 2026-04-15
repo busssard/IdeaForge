@@ -39,6 +39,8 @@ impl<'a> UserRepository<'a> {
             skills: Set(serde_json::json!([])),
             looking_for: Set(None),
             availability: Set(None),
+            locations: Set(serde_json::json!([])),
+            education_level: Set(None),
             created_at: Set(now),
             updated_at: Set(now),
         };
@@ -72,6 +74,8 @@ impl<'a> UserRepository<'a> {
             skills: Set(serde_json::json!([])),
             looking_for: Set(None),
             availability: Set(None),
+            locations: Set(serde_json::json!([])),
+            education_level: Set(None),
             created_at: Set(now),
             updated_at: Set(now),
         };
@@ -110,6 +114,7 @@ impl<'a> UserRepository<'a> {
             .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update(
         &self,
         id: Uuid,
@@ -119,6 +124,9 @@ impl<'a> UserRepository<'a> {
         skills: Option<&serde_json::Value>,
         looking_for: Option<Option<&str>>,
         availability: Option<&str>,
+        role: Option<UserRole>,
+        locations: Option<&serde_json::Value>,
+        education_level: Option<Option<&str>>,
     ) -> Result<user::Model, DbErr> {
         let user = user::Entity::find_by_id(id)
             .one(self.db)
@@ -143,6 +151,15 @@ impl<'a> UserRepository<'a> {
         }
         if let Some(av) = availability {
             active.availability = Set(Some(av.to_string()));
+        }
+        if let Some(r) = role {
+            active.role = Set(r);
+        }
+        if let Some(locs) = locations {
+            active.locations = Set(locs.clone());
+        }
+        if let Some(edu) = education_level {
+            active.education_level = Set(edu.map(|s| s.to_string()));
         }
         active.updated_at = Set(chrono::Utc::now().fixed_offset());
         active.update(self.db).await

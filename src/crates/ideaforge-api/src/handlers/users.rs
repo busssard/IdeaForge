@@ -42,6 +42,8 @@ pub struct UserResponse {
     pub skills: serde_json::Value,
     pub looking_for: Option<String>,
     pub availability: Option<String>,
+    pub locations: serde_json::Value,
+    pub education_level: Option<String>,
     pub created_at: String,
 }
 
@@ -55,8 +57,11 @@ pub struct PublicUserResponse {
     pub skills: serde_json::Value,
     pub looking_for: Option<String>,
     pub availability: Option<String>,
+    pub locations: serde_json::Value,
+    pub education_level: Option<String>,
     pub idea_count: u64,
     pub stoke_count: u64,
+    pub contribution_count: u64,
     pub created_at: String,
 }
 
@@ -82,6 +87,10 @@ pub struct UpdateMeRequest {
     pub skills: Option<Vec<String>>,
     pub looking_for: Option<Option<String>>,
     pub availability: Option<String>,
+    pub role: Option<String>,
+    /// Up to 3 free-text locations (city/country/region). Server enforces the cap.
+    pub locations: Option<Vec<String>>,
+    pub education_level: Option<Option<String>>,
 }
 
 fn err(status: StatusCode, code: &str, message: &str) -> impl IntoResponse {
@@ -155,8 +164,13 @@ async fn list_users(
                         skills: u.user.skills.clone(),
                         looking_for: u.user.looking_for.clone(),
                         availability: u.user.availability.clone(),
+                        locations: u.user.locations.clone(),
+                        education_level: u.user.education_level.clone(),
                         idea_count: u.idea_count,
                         stoke_count: u.stoke_count,
+                        // Computed only in the single-user endpoint to keep the
+                        // list query O(n) rather than O(n) joins per row.
+                        contribution_count: 0,
                         created_at: u.user.created_at.to_rfc3339(),
                     })
                     .collect(),
@@ -194,6 +208,8 @@ async fn get_me(State(state): State<AppState>, auth: AuthUser) -> impl IntoRespo
             skills: user.skills,
             looking_for: user.looking_for,
             availability: user.availability,
+            locations: user.locations,
+            education_level: user.education_level,
             created_at: user.created_at.to_rfc3339(),
         })
         .into_response(),
@@ -276,6 +292,72 @@ async fn update_me(
         .into_response();
     }
 
+    // Validate role (if present). Admin is never self-assignable.
+    let role_value = if let Some(ref r) = body.role {
+        match parse_user_role(r) {
+            Some(UserRole::Admin) => {
+                return err(
+                    StatusCode::FORBIDDEN,
+                    "FORBIDDEN",
+                    "You can't assign yourself the admin role",
+                )
+                .into_response();
+            }
+            Some(role) => Some(role),
+            None => {
+                return err(
+                    StatusCode::BAD_REQUEST,
+                    "VALIDATION_ERROR",
+                    "Unknown role",
+                )
+                .into_response();
+            }
+        }
+    } else {
+        None
+    };
+
+    // Validate locations (≤3, each ≤100 chars).
+    let locations_json = if let Some(ref locs) = body.locations {
+        if locs.len() > 3 {
+            return err(
+                StatusCode::BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "You can list at most 3 locations",
+            )
+            .into_response();
+        }
+        if locs.iter().any(|l| l.len() > 100) {
+            return err(
+                StatusCode::BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "Each location must be 100 characters or fewer",
+            )
+            .into_response();
+        }
+        // Strip empties + trim so clients can pass fixed-size arrays.
+        let cleaned: Vec<String> = locs
+            .iter()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        Some(serde_json::json!(cleaned))
+    } else {
+        None
+    };
+
+    // Validate education_level (free text, ≤100 chars).
+    if let Some(Some(ref edu)) = body.education_level
+        && edu.len() > 100
+    {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Education level text too long (max 100 chars)",
+        )
+        .into_response();
+    }
+
     let repo = UserRepository::new(state.db.connection());
     match repo
         .update(
@@ -286,6 +368,9 @@ async fn update_me(
             skills_json.as_ref(),
             body.looking_for.as_ref().map(|opt| opt.as_deref()),
             body.availability.as_deref(),
+            role_value,
+            locations_json.as_ref(),
+            body.education_level.as_ref().map(|opt| opt.as_deref()),
         )
         .await
     {
@@ -299,6 +384,8 @@ async fn update_me(
             skills: user.skills,
             looking_for: user.looking_for,
             availability: user.availability,
+            locations: user.locations,
+            education_level: user.education_level,
             created_at: user.created_at.to_rfc3339(),
         })
         .into_response(),
@@ -315,7 +402,7 @@ async fn update_me(
 }
 
 async fn get_user(State(state): State<AppState>, Path(id): Path<Uuid>) -> impl IntoResponse {
-    use ideaforge_db::entities::{idea, stoke};
+    use ideaforge_db::entities::{idea, stoke, team_member};
     use sea_orm::*;
 
     let repo = UserRepository::new(state.db.connection());
@@ -335,6 +422,18 @@ async fn get_user(State(state): State<AppState>, Path(id): Path<Uuid>) -> impl I
                 .await
                 .unwrap_or(0);
 
+            // Team memberships = ideas the user is actively contributing to.
+            // Exclude rows where the user is also the author (their own ideas
+            // are already in idea_count and would otherwise double-count).
+            let contribution_count = team_member::Entity::find()
+                .filter(team_member::Column::UserId.eq(id))
+                .inner_join(idea::Entity)
+                .filter(idea::Column::AuthorId.ne(id))
+                .filter(idea::Column::ArchivedAt.is_null())
+                .count(state.db.connection())
+                .await
+                .unwrap_or(0);
+
             Json(PublicUserResponse {
                 id: user.id,
                 display_name: user.display_name,
@@ -344,8 +443,11 @@ async fn get_user(State(state): State<AppState>, Path(id): Path<Uuid>) -> impl I
                 skills: user.skills,
                 looking_for: user.looking_for,
                 availability: user.availability,
+                locations: user.locations,
+                education_level: user.education_level,
                 idea_count,
                 stoke_count,
+                contribution_count,
                 created_at: user.created_at.to_rfc3339(),
             })
             .into_response()
@@ -499,6 +601,9 @@ async fn upload_avatar(
             None,
             None,
             Some(Some(&avatar_url)),
+            None,
+            None,
+            None,
             None,
             None,
             None,
