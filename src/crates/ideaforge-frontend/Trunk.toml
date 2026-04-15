@@ -13,6 +13,12 @@ rewrite = "/api/"
 backend = "http://localhost:3000/health"
 rewrite = "/health"
 
+# Avatar uploads (and any future user-uploaded assets) are served by the
+# backend via tower-http ServeDir; without this proxy they 404 on :8080.
+[[proxy]]
+backend = "http://localhost:3000/uploads/"
+rewrite = "/uploads/"
+
 # Generate HASHES.txt from the SRI integrity attrs Trunk already emits.
 # Ship it alongside each release so users / auditors can verify the
 # deployed WASM matches the repo.
