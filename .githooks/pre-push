@@ -1,16 +1,73 @@
 #!/usr/bin/env bash
 # pre-push hook — runs cargo check + cargo test before allowing a push.
-# Enable with: git config core.hooksPath .githooks
+# Enable with: git config core.hooksPath .githooks  (or scripts/install-hooks.sh)
 # Skip for an emergency push with: git push --no-verify
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT/src"
 
-echo "[pre-push] cargo check --workspace"
-cargo check --workspace --quiet
+# Colours (skip if not a tty)
+if [[ -t 1 ]]; then
+    BOLD=$'\e[1m'; DIM=$'\e[2m'; GREEN=$'\e[32m'; RED=$'\e[31m'
+    CYAN=$'\e[36m'; YELLOW=$'\e[33m'; RESET=$'\e[0m'
+else
+    BOLD=""; DIM=""; GREEN=""; RED=""; CYAN=""; YELLOW=""; RESET=""
+fi
 
-echo "[pre-push] cargo test --workspace"
+START_TS=$(date +%s)
+STEP=0
+TOTAL=4
+
+banner() {
+    STEP=$((STEP + 1))
+    echo
+    echo "${CYAN}${BOLD}[pre-push ${STEP}/${TOTAL}]${RESET} ${BOLD}$1${RESET}"
+    echo "${DIM}$ $2${RESET}"
+}
+
+fail() {
+    local elapsed=$(( $(date +%s) - START_TS ))
+    echo
+    echo "${RED}${BOLD}✗ pre-push failed${RESET} after ${elapsed}s at step ${STEP}/${TOTAL}"
+    echo "${DIM}  fix the failure above, or bypass with: git push --no-verify${RESET}"
+    exit 1
+}
+trap fail ERR
+
+echo "${BOLD}Running pre-push checks${RESET} ${DIM}(repo: $(basename "$REPO_ROOT"), branch: $(git rev-parse --abbrev-ref HEAD))${RESET}"
+echo "${DIM}workspace root: $PWD${RESET}"
+
+# 1. Format
+banner "rustfmt — formatting check" "cargo fmt --all -- --check"
+if ! cargo fmt --all -- --check; then
+    echo "${YELLOW}  hint: run 'cargo fmt --all' to fix${RESET}"
+    false
+fi
+echo "${GREEN}  ok${RESET}"
+
+# 2. Clippy (warnings-as-errors). Skip if clippy isn't installed.
+if cargo clippy --version >/dev/null 2>&1; then
+    banner "clippy — lint check" "cargo clippy --workspace --all-targets -- -D warnings"
+    cargo clippy --workspace --all-targets --quiet -- -D warnings
+    echo "${GREEN}  ok${RESET}"
+else
+    STEP=$((STEP + 1))
+    echo
+    echo "${YELLOW}[pre-push ${STEP}/${TOTAL}] clippy not installed — skipping${RESET}"
+fi
+
+# 3. Type check
+banner "cargo check — type check across workspace" "cargo check --workspace --all-targets"
+cargo check --workspace --all-targets --quiet
+echo "${GREEN}  ok${RESET}"
+
+# 4. Test suite
+banner "cargo test — running workspace tests" "cargo test --workspace"
+# Stream test output so the dev sees progress on long suites.
 cargo test --workspace --quiet
+echo "${GREEN}  ok${RESET}"
 
-echo "[pre-push] ok"
+ELAPSED=$(( $(date +%s) - START_TS ))
+echo
+echo "${GREEN}${BOLD}✓ pre-push passed${RESET} ${DIM}(${ELAPSED}s)${RESET}"
