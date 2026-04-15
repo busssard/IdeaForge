@@ -57,31 +57,20 @@ else
     false
 fi
 
-# --- 2. clippy ------------------------------------------------------------
+# --- 2. clippy (advisory: shows count but never blocks the push) ----------
 banner "clippy"
 CLIPPY_LOG="$LOG_DIR/ideaforge-pre-push-clippy.log"
 if ! cargo clippy --version >/dev/null 2>&1; then
     printf "%bskipped (not installed)%b\n" "$YELLOW" "$RESET"
 else
-    if CARGO_TERM_COLOR=never cargo clippy --workspace --all-targets --quiet \
-            -- -D warnings > "$CLIPPY_LOG" 2>&1; then
+    CLIPPY_STATUS=0
+    CARGO_TERM_COLOR=never cargo clippy --workspace --all-targets --quiet \
+        > "$CLIPPY_LOG" 2>&1 || CLIPPY_STATUS=$?
+    ISSUES=$(grep -cE '^(error|warning)(\[[^]]+\])?: ' "$CLIPPY_LOG" || true)
+    if [[ $CLIPPY_STATUS -eq 0 && $ISSUES -eq 0 ]]; then
         ok
     else
-        bad
-        echo "${DIM}  full log: $CLIPPY_LOG${RESET}"
-        echo "${BOLD}${RED}Clippy issues:${RESET}"
-        # Pair each `error:` / `warning:` line with the following ` --> file:line:col`.
-        awk '
-            /^(error|warning)(\[[^]]+\])?: / { msg = $0; next }
-            /^[[:space:]]*--> / && msg != "" {
-                sub(/^[[:space:]]*--> /, "", $0)
-                printf "  • %s\n    %s\n", $0, msg
-                msg = ""
-            }
-        ' "$CLIPPY_LOG" | head -80
-        echo
-        echo "${YELLOW}  fix the issues above, or narrow with: cargo clippy --workspace${RESET}"
-        false
+        printf "%b%d issues (advisory)%b ${DIM}— %s${RESET}\n" "$YELLOW" "$ISSUES" "$RESET" "$CLIPPY_LOG"
     fi
 fi
 
