@@ -21,6 +21,7 @@ pub mod task_board;
 pub mod bug_report;
 pub mod forge_logo;
 pub mod avatar_uploader;
+pub mod avatar_cropper;
 pub mod message_privately_button;
 pub mod keystore_gate;
 pub mod markdown;

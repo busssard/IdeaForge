@@ -11,18 +11,21 @@ pub struct AvatarUploadResponse {
 }
 
 /// Upload an avatar image. Uses the browser's native `FormData` + `fetch`
-/// because gloo-net doesn't expose multipart ergonomically.
-pub async fn upload_avatar(file: &web_sys::File) -> Result<AvatarUploadResponse, client::ApiError> {
+/// because gloo-net doesn't expose multipart ergonomically. Accepts any Blob
+/// (including File) — the avatar cropper produces a compressed JPEG Blob that
+/// we pass through unchanged.
+pub async fn upload_avatar(blob: &web_sys::Blob) -> Result<AvatarUploadResponse, client::ApiError> {
     let form = web_sys::FormData::new().map_err(|e| client::ApiError {
         status: 0,
         code: "FORM_DATA".into(),
         message: format!("Failed to create FormData: {:?}", e),
     })?;
-    form.append_with_blob("avatar", file).map_err(|e| client::ApiError {
-        status: 0,
-        code: "FORM_DATA".into(),
-        message: format!("Failed to attach file: {:?}", e),
-    })?;
+    form.append_with_blob_and_filename("avatar", blob, "avatar.jpg")
+        .map_err(|e| client::ApiError {
+            status: 0,
+            code: "FORM_DATA".into(),
+            message: format!("Failed to attach file: {:?}", e),
+        })?;
 
     let init = web_sys::RequestInit::new();
     init.set_method("POST");

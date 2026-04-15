@@ -2802,6 +2802,118 @@ input.filter-select {
     color: var(--text-muted);
 }
 
+/* --- Avatar cropper modal --- */
+.cropper-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg, 24px);
+}
+.cropper-panel {
+    background: var(--bg-card, #fff);
+    color: var(--text-primary, #111);
+    border-radius: var(--radius-lg, 12px);
+    padding: var(--space-xl, 32px);
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm, 8px);
+}
+.cropper-title {
+    margin: 0;
+    font-size: 1.2rem;
+}
+.cropper-hint {
+    margin: 0 0 var(--space-md, 16px) 0;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+.cropper-stage {
+    position: relative;
+    width: 320px;
+    height: 320px;
+    margin: 0 auto;
+    background: #111;
+    border-radius: var(--radius-md, 8px);
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    cursor: grab;
+}
+.cropper-stage:active {
+    cursor: grabbing;
+}
+.cropper-img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: center center;
+    will-change: transform;
+    pointer-events: none;
+    max-width: none;
+    max-height: none;
+}
+/* Dim everything outside the circle so the user sees exactly what will ship.
+ * The `closest-side` keyword anchors the gradient at the inscribed circle
+ * (radius = half the square side), which is the same region the 512×512 JPEG
+ * ends up occupying once it's rendered inside any `border-radius: 50%` avatar
+ * slot. Using the default `farthest-corner` would make the preview circle
+ * smaller than the saved area — the user would crop tighter than what we keep. */
+.cropper-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+        circle closest-side at center,
+        transparent 99%,
+        rgba(0, 0, 0, 0.6) 100%
+    );
+    border-radius: inherit;
+}
+/* Crisp 1px ring on the inscribed circle, so the crop boundary is unambiguous. */
+.cropper-stage::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
+    pointer-events: none;
+}
+.cropper-zoom {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md, 16px);
+    margin: var(--space-md, 16px) 0 var(--space-sm, 8px) 0;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+.cropper-zoom input[type="range"] {
+    flex: 1;
+    accent-color: var(--forge-orange, #d97706);
+}
+.cropper-error {
+    color: var(--danger, #ef4444);
+    margin: 0 0 var(--space-sm, 8px) 0;
+    font-size: 0.85rem;
+}
+.cropper-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm, 8px);
+    margin-top: var(--space-sm, 8px);
+}
+
 /* --- Messages page ---
  *
  * Layout rules for stability:
