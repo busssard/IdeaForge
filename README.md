@@ -90,6 +90,18 @@ Key properties:
 4. **Forward secrecy.** MLS epoch rotation ensures past messages remain confidential even if a current key is leaked.
 5. **On-chain timestamp proofs.** Every idea receives a Cardano-anchored hash on first publish, establishing a verifiable priority date for IP disputes.
 
+### Reproducible-build verification
+
+Encryption only protects users if the code doing the encrypting is the code they think they're running. Every release therefore ships with a `HASHES.txt` manifest at the root of `dist/`, listing the SHA-384 SRI integrity value of every WASM, JS, and CSS asset Trunk bundled. The `/how-it-works` page includes a live `<IntegrityCheck/>` widget that shows the hashes the user's browser actually loaded.
+
+Anyone can verify a deployed build with a three-way match:
+
+1. The hashes the browser loaded (shown on `/how-it-works`).
+2. The hashes advertised in the served `HASHES.txt`.
+3. The hashes produced by checking out the release tag and running `trunk build --release` locally.
+
+If all three match, the running site is the published open-source code — unmodified. The `post_build` hook that emits `HASHES.txt` lives at [`src/crates/ideaforge-frontend/scripts/emit-hashes.sh`](src/crates/ideaforge-frontend/scripts/emit-hashes.sh).
+
 Full details are in [`docs/security/ip_protection.md`](docs/security/ip_protection.md) and [`docs/security/security_framework.md`](docs/security/security_framework.md).
 
 ## Screenshots

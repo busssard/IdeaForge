@@ -7,6 +7,7 @@ Deploy IdeaForge on a Hetzner VPS alongside existing tenants (Discourse forum, S
 **Key design decisions**:
 - **Build in CI, ship artifacts.** A `cargo build --release` of the IdeaForge workspace peaks at 3–6 GB RAM. Building on a shared server risks OOM-killing Discourse's Unicorn/Sidekiq workers. CI builds the binary + the Trunk `dist/` bundle and scps them over.
 - **Atomic releases via symlink swap.** Trunk embeds SRI hashes in `index.html` pointing at specific hashed WASM/CSS filenames. A partial rsync into a live `dist/` would produce hash/asset skew (browser blocks stylesheet with integrity mismatch). Each release lands in `releases/<timestamp>-<sha>/` and `current` is atomically re-pointed.
+- **Reproducible-build manifest.** A Trunk `post_build` hook (`src/crates/ideaforge-frontend/scripts/emit-hashes.sh`) writes `dist/HASHES.txt` listing the SRI value of every shipped asset. The file must survive the CI tar + scp + extract cycle unchanged, and nginx must serve it at `/HASHES.txt` so auditors can compare against a local `trunk build` of the tagged source.
 - **Resource-capped systemd unit.** `MemoryMax` and `CPUQuota` ensure a runaway Axum process can't starve co-tenants.
 - **Dedicated Postgres DB/role.** Don't share with Discourse (different version/extension expectations). Reuse the existing cluster with a new DB + role, or run a separate instance on another port.
 
@@ -269,6 +270,15 @@ server {
         try_files $uri =404;
     }
 
+    # Reproducible-build manifest. Served uncached so auditors always see
+    # the current release's hashes. Consumed by the /how-it-works page
+    # and by external verifiers rebuilding from the tagged source.
+    location = /HASHES.txt {
+        add_header Cache-Control "no-store, must-revalidate" always;
+        add_header Content-Type "text/plain; charset=utf-8" always;
+        try_files /HASHES.txt =404;
+    }
+
     # API + WebSocket endpoints → Axum
     location /api/ {
         proxy_pass http://ideaforge_api;
@@ -355,6 +365,15 @@ sudo /bin/systemctl restart ideaforge
 # (Not strictly required — root path resolves lazily — but cheap insurance
 # against any worker caching a stale fd.)
 sudo /bin/systemctl reload nginx
+
+# Verify the reproducible-build manifest made it into the release.
+# Missing HASHES.txt means the post_build hook didn't run in CI — block the
+# deploy rather than ship a release that breaks public verifiability.
+if [[ ! -s "$RELEASE_DIR/dist/HASHES.txt" ]]; then
+    log "ERROR: $RELEASE_DIR/dist/HASHES.txt missing or empty"
+    exit 1
+fi
+log "HASHES.txt present ($(wc -l < "$RELEASE_DIR/dist/HASHES.txt") entries)"
 
 # Health check
 log "Health check..."
