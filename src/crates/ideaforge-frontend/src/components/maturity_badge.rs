@@ -13,7 +13,12 @@ pub fn MaturityBadge(#[prop(into)] maturity: String) -> impl IntoView {
         _ => ("badge badge-spark", "Unknown"),
     };
 
+    // Surfaces on hover — the long-form explanation lives in the details panel
+    // on the idea page. This keeps the badge itself terse.
+    let tooltip = "Maturity advances as the community engages — stokes, comments, \
+                   suggestions, team activity. It isn't manually set.";
+
     view! {
-        <span class=class>{label}</span>
+        <span class=class title=tooltip>{label}</span>
     }
 }

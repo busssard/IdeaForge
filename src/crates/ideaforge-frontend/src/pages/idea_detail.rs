@@ -135,6 +135,22 @@ pub fn IdeaDetailPage() -> impl IntoView {
                                         <div class="idea-detail-badges">
                                             <MaturityBadge maturity=maturity_view.clone() />
                                             <VisibilityBadge openness=openness_for_badge />
+                                            <details class="maturity-explainer">
+                                                <summary>"How does this advance?"</summary>
+                                                <p>
+                                                    "An idea's maturity isn't set by hand — it reflects how much
+                                                    the community has engaged. The stages go "
+                                                    <strong>"Spark \u{2192} Half-Baked \u{2192} Thought Through \u{2192}
+                                                    Serious Proposal \u{2192} In Work \u{2192} Almost Finished \u{2192}
+                                                    Completed"</strong>
+                                                    "."
+                                                </p>
+                                                <p>
+                                                    "Progression is earned through stokes, comments, suggestions,
+                                                    team members joining, and tasks being completed. Keep building
+                                                    and sharing and the idea will grow."
+                                                </p>
+                                            </details>
                                         </div>
                                         <div class="idea-detail-meta">
                                             <span>

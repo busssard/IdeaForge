@@ -1126,7 +1126,31 @@ input.filter-select {
     display: flex;
     gap: var(--space-sm);
     flex-wrap: wrap;
+    align-items: center;
     margin-bottom: var(--space-md);
+}
+
+.maturity-explainer {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.maturity-explainer summary {
+    cursor: pointer;
+    user-select: none;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm, 4px);
+    transition: background 0.12s ease;
+}
+.maturity-explainer summary:hover {
+    background: var(--bg-subtle, rgba(0, 0, 0, 0.04));
+}
+.maturity-explainer[open] summary {
+    margin-bottom: var(--space-sm, 8px);
+}
+.maturity-explainer p {
+    margin: var(--space-xs, 4px) 0;
+    line-height: 1.5;
+    max-width: 62ch;
 }
 
 .idea-detail-meta {
