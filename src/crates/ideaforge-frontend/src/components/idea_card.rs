@@ -27,7 +27,7 @@ pub fn IdeaCard(idea: IdeaResponse) -> impl IntoView {
     let is_own_idea = auth
         .user
         .get_untracked()
-        .map_or(false, |u| u.id == idea.author_id);
+        .is_some_and(|u| u.id == idea.author_id);
     let card_class = if is_own_idea {
         "card card-clickable idea-card idea-card-own fade-in"
     } else {

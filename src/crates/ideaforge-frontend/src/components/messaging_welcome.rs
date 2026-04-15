@@ -9,7 +9,7 @@ fn is_dismissed() -> bool {
     web_sys::window()
         .and_then(|w| w.local_storage().ok().flatten())
         .and_then(|s| s.get_item(DISMISSED_KEY).ok().flatten())
-        .map_or(false, |v| v == "1")
+        .is_some_and(|v| v == "1")
 }
 
 fn set_dismissed() {
@@ -38,7 +38,7 @@ pub fn MessagingWelcome() -> impl IntoView {
                         <h3>"Private messaging, quickly explained"</h3>
                         <button
                             class="messaging-welcome-close"
-                            on:click=dismiss.clone()
+                            on:click=dismiss
                             aria-label="Dismiss"
                             title="Dismiss"
                         >"\u{2715}"</button>

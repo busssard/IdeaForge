@@ -315,10 +315,10 @@ async fn unlock_keystore(
     let now = Utc::now();
 
     // Hard lock first — refuse immediately if in lockout.
-    if let Some(locked_until) = row.locked_until {
-        if locked_until.to_utc() > now {
-            return locked_response(locked_until, row.failed_attempts).into_response();
-        }
+    if let Some(locked_until) = row.locked_until
+        && locked_until.to_utc() > now
+    {
+        return locked_response(locked_until, row.failed_attempts).into_response();
     }
 
     if constant_time_eq(&row.verifier, &verifier) {

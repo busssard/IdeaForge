@@ -109,7 +109,7 @@ async fn list_notifications(
             let total_pages = if total == 0 {
                 0
             } else {
-                (total + per_page - 1) / per_page
+                total.div_ceil(per_page)
             };
             Json(NotificationListResponse {
                 data: notifications.iter().map(notification_response).collect(),

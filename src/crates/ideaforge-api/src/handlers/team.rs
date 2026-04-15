@@ -284,7 +284,7 @@ async fn list_applications(
             let total_pages = if total == 0 {
                 0
             } else {
-                (total + per_page - 1) / per_page
+                total.div_ceil(per_page)
             };
             Json(ApplicationListResponse {
                 data: apps
@@ -557,15 +557,15 @@ async fn update_team_role(
     }
 
     // Validate role_label length if provided
-    if let Some(ref label) = body.role_label {
-        if label.trim().is_empty() || label.len() > 100 {
-            return err(
-                StatusCode::BAD_REQUEST,
-                "VALIDATION_ERROR",
-                "Role label must be 1-100 chars",
-            )
-            .into_response();
-        }
+    if let Some(ref label) = body.role_label
+        && (label.trim().is_empty() || label.len() > 100)
+    {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Role label must be 1-100 chars",
+        )
+        .into_response();
     }
 
     // If both role and role_label are provided, use update_role

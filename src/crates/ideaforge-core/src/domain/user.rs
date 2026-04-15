@@ -26,16 +26,12 @@ pub struct User {
 /// defined in the long-term architecture and restored in Phase 2+.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum UserRole {
     Entrepreneur,
     Maker,
+    #[default]
     Curious,
-}
-
-impl Default for UserRole {
-    fn default() -> Self {
-        Self::Curious
-    }
 }
 
 impl UserRole {

@@ -282,10 +282,10 @@ fn UnlockForm(phase: RwSignal<Phase>, mls: MlsState) -> impl IntoView {
                             if e.message.contains("later") {
                                 err.set("Too many failed PIN attempts. Try again later.".into());
                                 // Re-fetch status to update UI
-                                if let Ok(s) = keystore::status().await {
-                                    if let Some(ms) = s.locked_until_ms {
-                                        phase.set(Phase::Locked(ms));
-                                    }
+                                if let Ok(s) = keystore::status().await
+                                    && let Some(ms) = s.locked_until_ms
+                                {
+                                    phase.set(Phase::Locked(ms));
                                 }
                             } else {
                                 err.set(e.message);

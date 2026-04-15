@@ -141,7 +141,7 @@ async fn list_users(
             let total_pages = if total == 0 {
                 0
             } else {
-                (total + per_page - 1) / per_page
+                total.div_ceil(per_page)
             };
             Json(UserListResponse {
                 data: users
@@ -216,25 +216,25 @@ async fn update_me(
     Json(body): Json<UpdateMeRequest>,
 ) -> impl IntoResponse {
     // Validate
-    if let Some(ref name) = body.display_name {
-        if name.trim().is_empty() || name.len() > 100 {
-            return err(
-                StatusCode::BAD_REQUEST,
-                "VALIDATION_ERROR",
-                "Display name must be 1-100 chars",
-            )
-            .into_response();
-        }
+    if let Some(ref name) = body.display_name
+        && (name.trim().is_empty() || name.len() > 100)
+    {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Display name must be 1-100 chars",
+        )
+        .into_response();
     }
-    if let Some(ref bio) = body.bio {
-        if bio.len() > 2000 {
-            return err(
-                StatusCode::BAD_REQUEST,
-                "VALIDATION_ERROR",
-                "Bio too long (max 2000 chars)",
-            )
-            .into_response();
-        }
+    if let Some(ref bio) = body.bio
+        && bio.len() > 2000
+    {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Bio too long (max 2000 chars)",
+        )
+        .into_response();
     }
 
     // Validate skills
@@ -253,27 +253,27 @@ async fn update_me(
     };
 
     // Validate looking_for
-    if let Some(Some(ref lf)) = body.looking_for {
-        if lf.len() > 500 {
-            return err(
-                StatusCode::BAD_REQUEST,
-                "VALIDATION_ERROR",
-                "Looking for text too long (max 500 chars)",
-            )
-            .into_response();
-        }
+    if let Some(Some(ref lf)) = body.looking_for
+        && lf.len() > 500
+    {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Looking for text too long (max 500 chars)",
+        )
+        .into_response();
     }
 
     // Validate availability
-    if let Some(ref av) = body.availability {
-        if av.len() > 100 {
-            return err(
-                StatusCode::BAD_REQUEST,
-                "VALIDATION_ERROR",
-                "Availability text too long (max 100 chars)",
-            )
-            .into_response();
-        }
+    if let Some(ref av) = body.availability
+        && av.len() > 100
+    {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Availability text too long (max 100 chars)",
+        )
+        .into_response();
     }
 
     let repo = UserRepository::new(state.db.connection());
@@ -475,7 +475,7 @@ async fn upload_avatar(
 
     let write_outcome = match write_result {
         Ok(r) => r,
-        Err(e) => Err(std::io::Error::new(std::io::ErrorKind::Other, e)),
+        Err(e) => Err(std::io::Error::other(e)),
     };
     if let Err(e) = write_outcome {
         tracing::error!("Failed to write avatar to disk: {e}");

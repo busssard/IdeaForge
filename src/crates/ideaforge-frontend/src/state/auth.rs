@@ -18,6 +18,12 @@ pub struct AuthState {
     pub loading: RwSignal<bool>,
 }
 
+impl Default for AuthState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AuthState {
     pub fn new() -> Self {
         let user = RwSignal::new(None);

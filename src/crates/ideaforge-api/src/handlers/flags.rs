@@ -176,7 +176,7 @@ async fn list_pending_flags(
 ) -> impl IntoResponse {
     // Admin check
     let role = UserRole::from_str_opt(&auth.role);
-    if !role.map_or(false, |r| r.is_admin()) {
+    if !role.is_some_and(|r| r.is_admin()) {
         return err(StatusCode::FORBIDDEN, "FORBIDDEN", "Admin access required").into_response();
     }
 
@@ -189,7 +189,7 @@ async fn list_pending_flags(
             let total_pages = if total == 0 {
                 0
             } else {
-                (total + per_page - 1) / per_page
+                total.div_ceil(per_page)
             };
             Json(FlagListResponse {
                 data: flags.iter().map(flag_response).collect(),
@@ -223,7 +223,7 @@ async fn review_flag(
 ) -> impl IntoResponse {
     // Admin check
     let role = UserRole::from_str_opt(&auth.role);
-    if !role.map_or(false, |r| r.is_admin()) {
+    if !role.is_some_and(|r| r.is_admin()) {
         return err(StatusCode::FORBIDDEN, "FORBIDDEN", "Admin access required").into_response();
     }
 

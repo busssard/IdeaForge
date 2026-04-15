@@ -14,11 +14,8 @@ pub fn OnboardingChecklist() -> impl IntoView {
     let dismissed_forever = RwSignal::new(is_dismissed_forever());
     let location = use_location();
 
-    let has_profile = Signal::derive(move || {
-        auth.user
-            .get()
-            .map_or(false, |u| !u.display_name.is_empty())
-    });
+    let has_profile =
+        Signal::derive(move || auth.user.get().is_some_and(|u| !u.display_name.is_empty()));
 
     let has_idea = RwSignal::new(false);
     let has_stoke = RwSignal::new(false);
@@ -131,7 +128,7 @@ fn is_dismissed() -> bool {
     web_sys::window()
         .and_then(|w| w.local_storage().ok().flatten())
         .and_then(|s| s.get_item("ideaforge_onboarding_dismissed").ok().flatten())
-        .map_or(false, |v| v == "true")
+        .is_some_and(|v| v == "true")
 }
 
 fn set_dismissed() {
@@ -148,7 +145,7 @@ fn is_dismissed_forever() -> bool {
                 .ok()
                 .flatten()
         })
-        .map_or(false, |v| v == "true")
+        .is_some_and(|v| v == "true")
 }
 
 fn set_dismissed_forever() {
@@ -161,5 +158,5 @@ fn check_visited_people() -> bool {
     web_sys::window()
         .and_then(|w| w.local_storage().ok().flatten())
         .and_then(|s| s.get_item("ideaforge_visited_people").ok().flatten())
-        .map_or(false, |v| v == "true")
+        .is_some_and(|v| v == "true")
 }

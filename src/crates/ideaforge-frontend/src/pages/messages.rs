@@ -267,12 +267,11 @@ fn MessagesInner() -> impl IntoView {
 
                                 // If the profile page parked a conversation to
                                 // open, select it now that the list is loaded.
-                                if let Some(target) = mls.pending_selection.get_untracked() {
-                                    if list.data.iter().any(|g| g.id == target) {
+                                if let Some(target) = mls.pending_selection.get_untracked()
+                                    && list.data.iter().any(|g| g.id == target) {
                                         chat.selected.set(Some(target));
                                         mls.pending_selection.set(None);
                                     }
-                                }
 
                                 if list.data.is_empty() {
                                     view! {
@@ -667,10 +666,11 @@ fn short_id(id: &str) -> String {
 ///   3. For multi-member: comma-joined peer names (truncated)
 ///   4. Fallback: short server id
 fn conversation_title(g: &api::GroupSummary, my_id: &str) -> String {
-    if let Some(name) = &g.name {
-        if !name.is_empty() && name != "smoketest" {
-            return name.clone();
-        }
+    if let Some(name) = &g.name
+        && !name.is_empty()
+        && name != "smoketest"
+    {
+        return name.clone();
     }
     let peers: Vec<&str> = g
         .members

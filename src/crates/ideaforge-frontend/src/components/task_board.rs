@@ -169,12 +169,9 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
             creating.set(false);
             // Re-fetch board
             let idea_id = idea_id_stored.get_value();
-            match api::board::get_board(&idea_id).await {
-                Ok(board) => {
-                    total_budget.set(board.total_budget_cents);
-                    columns.set(Some(board.columns));
-                }
-                Err(_) => {}
+            if let Ok(board) = api::board::get_board(&idea_id).await {
+                total_budget.set(board.total_budget_cents);
+                columns.set(Some(board.columns));
             }
         });
     };
@@ -189,12 +186,9 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
             wasm_bindgen_futures::spawn_local(async move {
                 let _ = api::board::update_task_status(&idea_id, &task_id, new_status).await;
                 // Re-fetch board
-                match api::board::get_board(&idea_id).await {
-                    Ok(board) => {
-                        total_budget.set(board.total_budget_cents);
-                        columns.set(Some(board.columns));
-                    }
-                    Err(_) => {}
+                if let Ok(board) = api::board::get_board(&idea_id).await {
+                    total_budget.set(board.total_budget_cents);
+                    columns.set(Some(board.columns));
                 }
             });
         }
@@ -209,12 +203,9 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
             wasm_bindgen_futures::spawn_local(async move {
                 let _ = api::board::delete_task(&idea_id, &task_id).await;
                 // Re-fetch board
-                match api::board::get_board(&idea_id).await {
-                    Ok(board) => {
-                        total_budget.set(board.total_budget_cents);
-                        columns.set(Some(board.columns));
-                    }
-                    Err(_) => {}
+                if let Ok(board) = api::board::get_board(&idea_id).await {
+                    total_budget.set(board.total_budget_cents);
+                    columns.set(Some(board.columns));
                 }
             });
         }
@@ -279,7 +270,10 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
                 }
                 .into_any()
             }
-            _ => view! {}.into_any(),
+            _ => {
+                let _: () = view! {};
+                ().into_any()
+            }
         };
 
         let on_delete = delete_task(task_id_del);
@@ -294,7 +288,10 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
                     .map(|d| {
                         view! { <Markdown content=d class="task-desc".to_string() /> }.into_any()
                     })
-                    .unwrap_or_else(|| view! {}.into_any())}
+                    .unwrap_or_else(|| {
+                        let _: () = view! {};
+                        ().into_any()
+                    })}
                 {(!budget_display.is_empty())
                     .then(|| {
                         view! { <span class="task-budget">{budget_display}</span> }
@@ -304,7 +301,10 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
                         .map(|d| {
                             view! { <span class="task-due">{d}</span> }.into_any()
                         })
-                        .unwrap_or_else(|| view! {}.into_any())}
+                        .unwrap_or_else(|| {
+                            let _: () = view! {};
+                            ().into_any()
+                        })}
                     {tags
                         .into_iter()
                         .map(|t| {
@@ -339,7 +339,8 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
                             }
                                 .into_any()
                         } else {
-                            view! {}.into_any()
+                            let _: () = view! {};
+                            ().into_any()
                         }
                     }}
                 </div>
@@ -352,7 +353,8 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
                         }
                             .into_any()
                     } else {
-                        view! {}.into_any()
+                        let _: () = view! {};
+                        ().into_any()
                     }
                 }}
             </div>
@@ -361,7 +363,8 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
             {move || {
                 let err = error_msg.get();
                 if err.is_empty() {
-                    view! {}.into_any()
+                    let _: () = view! {};
+                    ().into_any()
                 } else {
                     view! { <div class="form-error">{err}</div> }.into_any()
                 }
@@ -499,7 +502,10 @@ pub fn TaskBoard(idea_id: String, author_id: String) -> impl IntoView {
                             }
                                 .into_any()
                         }
-                        None => view! {}.into_any(),
+                        None => {
+                            let _: () = view! {};
+                            ().into_any()
+                        },
                     }
                 }
             }}

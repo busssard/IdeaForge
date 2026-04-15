@@ -272,7 +272,7 @@ async fn list_ideas(
         || opt_auth
             .0
             .as_ref()
-            .map_or(true, |auth| Some(auth.user_id) != params.author_id);
+            .is_none_or(|auth| Some(auth.user_id) != params.author_id);
 
     let repo = IdeaRepository::new(state.db.connection());
     match repo
@@ -356,7 +356,7 @@ async fn list_ideas(
             let total_pages = if total == 0 {
                 0
             } else {
-                (total + per_page - 1) / per_page
+                total.div_ceil(per_page)
             };
             Json(IdeaListResponse {
                 data: ideas
@@ -416,7 +416,7 @@ async fn create_idea(
 ) -> impl IntoResponse {
     // Permission check: only entrepreneurs, makers, and admins can create ideas
     let role = UserRole::from_str_opt(&auth.role);
-    if !role.map_or(false, |r| r.can_create_ideas()) {
+    if !role.is_some_and(|r| r.can_create_ideas()) {
         return err(
             StatusCode::FORBIDDEN,
             "FORBIDDEN",
@@ -623,7 +623,7 @@ async fn get_idea(
                 let is_author = opt_auth
                     .0
                     .as_ref()
-                    .map_or(false, |auth| auth.user_id == idea.author_id);
+                    .is_some_and(|auth| auth.user_id == idea.author_id);
                 let is_team = if let OptionalAuth(Some(ref auth)) = opt_auth {
                     if !is_author {
                         let team_repo = TeamMemberRepository::new(state.db.connection());
@@ -729,25 +729,25 @@ async fn update_idea(
     }
 
     // Validate optional fields
-    if let Some(ref t) = body.title {
-        if t.trim().is_empty() || t.len() > 200 {
-            return err(
-                StatusCode::BAD_REQUEST,
-                "VALIDATION_ERROR",
-                "Title must be 1-200 chars",
-            )
-            .into_response();
-        }
+    if let Some(ref t) = body.title
+        && (t.trim().is_empty() || t.len() > 200)
+    {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Title must be 1-200 chars",
+        )
+        .into_response();
     }
-    if let Some(ref s) = body.summary {
-        if s.trim().is_empty() || s.len() > 500 {
-            return err(
-                StatusCode::BAD_REQUEST,
-                "VALIDATION_ERROR",
-                "Summary must be 1-500 chars",
-            )
-            .into_response();
-        }
+    if let Some(ref s) = body.summary
+        && (s.trim().is_empty() || s.len() > 500)
+    {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Summary must be 1-500 chars",
+        )
+        .into_response();
     }
     let openness = match &body.openness {
         Some(o) => match IdeaOpenness::from_str_opt(o) {
@@ -870,7 +870,7 @@ async fn list_stokes(
             let total_pages = if total == 0 {
                 0
             } else {
-                (total + per_page - 1) / per_page
+                total.div_ceil(per_page)
             };
             Json(StokeListResponse {
                 data: stokes
@@ -1051,7 +1051,7 @@ async fn create_contribution(
     // Permission check: only entrepreneurs, makers, and admins can submit suggestions
     if contribution_type == ContributionKind::Suggestion {
         let role = UserRole::from_str_opt(&auth.role);
-        if !role.map_or(false, |r| r.can_suggest()) {
+        if !role.is_some_and(|r| r.can_suggest()) {
             return err(
                 StatusCode::FORBIDDEN,
                 "FORBIDDEN",
@@ -1134,7 +1134,7 @@ async fn list_contributions(
             let total_pages = if total == 0 {
                 0
             } else {
-                (total + per_page - 1) / per_page
+                total.div_ceil(per_page)
             };
             Json(ContributionListResponse {
                 data: contributions
@@ -1280,7 +1280,7 @@ async fn list_my_stoked_ideas(
     let total_pages = if total == 0 {
         0
     } else {
-        (total + per_page - 1) / per_page
+        total.div_ceil(per_page)
     };
     Json(IdeaListResponse {
         data: ideas

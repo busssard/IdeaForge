@@ -182,13 +182,13 @@ impl<'a> UserRepository<'a> {
         }
 
         // Filter by skills using JSONB containment
-        if let Some(skill_list) = skills {
-            if !skill_list.is_empty() {
-                // Build JSONB array literal for containment check
-                let skills_json =
-                    serde_json::to_string(&skill_list).unwrap_or_else(|_| "[]".to_string());
-                query = query.filter(Expr::cust_with_values("skills @> ?::jsonb", [skills_json]));
-            }
+        if let Some(skill_list) = skills
+            && !skill_list.is_empty()
+        {
+            // Build JSONB array literal for containment check
+            let skills_json =
+                serde_json::to_string(&skill_list).unwrap_or_else(|_| "[]".to_string());
+            query = query.filter(Expr::cust_with_values("skills @> ?::jsonb", [skills_json]));
         }
 
         // Aggregate sorts use scalar subqueries against ideas / stokes — can't

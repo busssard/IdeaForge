@@ -47,7 +47,7 @@ pub fn NotificationBell() -> impl IntoView {
             }
 
             let count = unread.get()
-                .and_then(|r| (*r).clone())
+                .and_then(|r| *r )
                 .unwrap_or(0);
 
             view! {

@@ -28,7 +28,7 @@ pub fn MessagePrivatelyButton(target_user_id: String) -> impl IntoView {
 
     let is_self = {
         let target_inner = target.get_value();
-        move || auth.user.get().map_or(false, |u| u.id == target_inner)
+        move || auth.user.get().is_some_and(|u| u.id == target_inner)
     };
 
     let on_click = move |_: web_sys::MouseEvent| {
@@ -124,23 +124,21 @@ pub fn MessagePrivatelyButton(target_user_id: String) -> impl IntoView {
                     // Creating a group mutated the OpenMLS storage — save it.
                     if let Some(keys) = mls.keys_ref() {
                         let snapshot = client.borrow().to_serialized();
-                        if let Ok(snap) = snapshot {
-                            if let Ok(pt) = serde_json::to_vec(&snap) {
-                                if let Ok(wrapped) = crate::mls::crypto::seal(&keys.wrap_key, &pt) {
-                                    use base64::{Engine, engine::general_purpose::STANDARD};
-                                    let body = serde_json::json!({
-                                        "verifier_b64": STANDARD.encode(keys.verifier),
-                                        "wrapped_blob_b64": STANDARD.encode(wrapped),
-                                    });
-                                    let _ = crate::api::client::put::<
-                                        serde_json::Value,
-                                        serde_json::Value,
-                                    >(
-                                        "/api/v1/mls/keystore", &body
-                                    )
-                                    .await;
-                                }
-                            }
+                        if let Ok(snap) = snapshot
+                            && let Ok(pt) = serde_json::to_vec(&snap)
+                            && let Ok(wrapped) = crate::mls::crypto::seal(&keys.wrap_key, &pt)
+                        {
+                            use base64::{Engine, engine::general_purpose::STANDARD};
+                            let body = serde_json::json!({
+                                "verifier_b64": STANDARD.encode(keys.verifier),
+                                "wrapped_blob_b64": STANDARD.encode(wrapped),
+                            });
+                            let _ =
+                                crate::api::client::put::<serde_json::Value, serde_json::Value>(
+                                    "/api/v1/mls/keystore",
+                                    &body,
+                                )
+                                .await;
                         }
                     }
                     navigate_fn("/messages", Default::default());

@@ -48,7 +48,7 @@ pub fn AvatarUploader(
             // Clear previous selection so picking the same file re-opens the
             // cropper (otherwise the `change` event doesn't fire).
             input.set_value("");
-            let _ = input.click();
+            input.click();
         }
     };
 

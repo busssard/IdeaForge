@@ -80,7 +80,7 @@ pub fn IdeaDetailPage() -> impl IntoView {
                             let is_author = auth
                                 .user
                                 .get_untracked()
-                                .map_or(false, |u| u.id == author_id_check);
+                                .is_some_and(|u| u.id == author_id_check);
 
                             // Editing state
                             let editing = RwSignal::new(false);

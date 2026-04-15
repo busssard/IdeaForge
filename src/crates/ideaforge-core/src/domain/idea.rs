@@ -32,19 +32,15 @@ pub struct Idea {
 /// (docs/architecture/database_schema.md) and will be restored in Phase 2+.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum IdeaMaturity {
     /// New idea, just posted
+    #[default]
     Spark,
     /// Validated interest, developing (formerly "thought_through")
     Building,
     /// Active team, executing (formerly "in_work")
     InWork,
-}
-
-impl Default for IdeaMaturity {
-    fn default() -> Self {
-        Self::Spark
-    }
 }
 
 /// Criteria required for a maturity transition.
@@ -105,19 +101,15 @@ impl IdeaMaturity {
 /// MVP has 3 modes (no Secret -- deferred to Phase 2+ with encryption infrastructure).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum IdeaOpenness {
     /// Fully open, anyone can see and contribute
+    #[default]
     Open,
     /// Open but team membership is curated
     Collaborative,
     /// Visible but contributions require approval
     Commercial,
-}
-
-impl Default for IdeaOpenness {
-    fn default() -> Self {
-        Self::Open
-    }
 }
 
 /// Human "Stoke" -- an upvote/approval of an idea.

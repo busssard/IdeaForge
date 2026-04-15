@@ -36,8 +36,10 @@ pub struct BoardTask {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum BoardTaskStatus {
     /// Available for someone to claim
+    #[default]
     Open,
     /// Someone is working on it
     Assigned,
@@ -47,24 +49,14 @@ pub enum BoardTaskStatus {
     Done,
 }
 
-impl Default for BoardTaskStatus {
-    fn default() -> Self {
-        Self::Open
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum TaskPriority {
+    #[default]
     Normal = 0,
     High = 1,
     Urgent = 2,
-}
-
-impl Default for TaskPriority {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 // =============================================================================
@@ -84,33 +76,25 @@ pub struct TeamMember {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum TeamMemberRole {
     /// Idea author / project lead
     Lead,
     /// Accepted maker working on tasks
+    #[default]
     Builder,
     /// Non-building contributor / advisor
     Advisor,
 }
 
-impl Default for TeamMemberRole {
-    fn default() -> Self {
-        Self::Builder
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum TeamMemberStatus {
+    #[default]
     Active,
     Inactive,
     Removed,
-}
-
-impl Default for TeamMemberStatus {
-    fn default() -> Self {
-        Self::Active
-    }
 }
 
 // =============================================================================
@@ -133,17 +117,13 @@ pub struct TeamApplication {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum TeamApplicationStatus {
+    #[default]
     Pending,
     Accepted,
     Rejected,
     Withdrawn,
-}
-
-impl Default for TeamApplicationStatus {
-    fn default() -> Self {
-        Self::Pending
-    }
 }
 
 // =============================================================================

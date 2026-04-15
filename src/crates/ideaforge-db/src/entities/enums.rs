@@ -4,21 +4,17 @@ use serde::{Deserialize, Serialize};
 /// PostgreSQL enum: user_role
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "user_role")]
+#[derive(Default)]
 pub enum UserRole {
     #[sea_orm(string_value = "entrepreneur")]
     Entrepreneur,
     #[sea_orm(string_value = "maker")]
     Maker,
     #[sea_orm(string_value = "curious")]
+    #[default]
     Curious,
     #[sea_orm(string_value = "admin")]
     Admin,
-}
-
-impl Default for UserRole {
-    fn default() -> Self {
-        Self::Curious
-    }
 }
 
 impl std::fmt::Display for UserRole {
@@ -62,19 +58,15 @@ impl UserRole {
 /// PostgreSQL enum: idea_maturity
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "idea_maturity")]
+#[derive(Default)]
 pub enum IdeaMaturity {
     #[sea_orm(string_value = "spark")]
+    #[default]
     Spark,
     #[sea_orm(string_value = "building")]
     Building,
     #[sea_orm(string_value = "in_work")]
     InWork,
-}
-
-impl Default for IdeaMaturity {
-    fn default() -> Self {
-        Self::Spark
-    }
 }
 
 impl std::fmt::Display for IdeaMaturity {
@@ -101,19 +93,15 @@ impl IdeaMaturity {
 /// PostgreSQL enum: idea_lifecycle
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "idea_lifecycle")]
+#[derive(Default)]
 pub enum IdeaLifecycle {
     #[sea_orm(string_value = "not_started")]
+    #[default]
     NotStarted,
     #[sea_orm(string_value = "ongoing")]
     Ongoing,
     #[sea_orm(string_value = "finished")]
     Finished,
-}
-
-impl Default for IdeaLifecycle {
-    fn default() -> Self {
-        Self::NotStarted
-    }
 }
 
 impl std::fmt::Display for IdeaLifecycle {
@@ -140,8 +128,10 @@ impl IdeaLifecycle {
 /// PostgreSQL enum: idea_openness
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "idea_openness")]
+#[derive(Default)]
 pub enum IdeaOpenness {
     #[sea_orm(string_value = "open")]
+    #[default]
     Open,
     #[sea_orm(string_value = "collaborative")]
     Collaborative,
@@ -151,12 +141,6 @@ pub enum IdeaOpenness {
     Private,
     #[sea_orm(string_value = "nda_protected")]
     NdaProtected,
-}
-
-impl Default for IdeaOpenness {
-    fn default() -> Self {
-        Self::Open
-    }
 }
 
 impl std::fmt::Display for IdeaOpenness {
@@ -195,8 +179,10 @@ impl IdeaOpenness {
 /// PostgreSQL enum: contribution_type
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "contribution_type")]
+#[derive(Default)]
 pub enum ContributionKind {
     #[sea_orm(string_value = "comment")]
+    #[default]
     Comment,
     #[sea_orm(string_value = "suggestion")]
     Suggestion,
@@ -208,12 +194,6 @@ pub enum ContributionKind {
     Research,
     #[sea_orm(string_value = "other")]
     Other,
-}
-
-impl Default for ContributionKind {
-    fn default() -> Self {
-        Self::Comment
-    }
 }
 
 impl std::fmt::Display for ContributionKind {
@@ -232,19 +212,15 @@ impl std::fmt::Display for ContributionKind {
 /// PostgreSQL enum: team_member_role
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "team_member_role")]
+#[derive(Default)]
 pub enum TeamMemberRole {
     #[sea_orm(string_value = "lead")]
     Lead,
     #[sea_orm(string_value = "builder")]
+    #[default]
     Builder,
     #[sea_orm(string_value = "advisor")]
     Advisor,
-}
-
-impl Default for TeamMemberRole {
-    fn default() -> Self {
-        Self::Builder
-    }
 }
 
 impl std::fmt::Display for TeamMemberRole {
@@ -271,8 +247,10 @@ impl TeamMemberRole {
 /// PostgreSQL enum: application_status
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "application_status")]
+#[derive(Default)]
 pub enum ApplicationStatus {
     #[sea_orm(string_value = "pending")]
+    #[default]
     Pending,
     #[sea_orm(string_value = "accepted")]
     Accepted,
@@ -280,12 +258,6 @@ pub enum ApplicationStatus {
     Rejected,
     #[sea_orm(string_value = "withdrawn")]
     Withdrawn,
-}
-
-impl Default for ApplicationStatus {
-    fn default() -> Self {
-        Self::Pending
-    }
 }
 
 impl std::fmt::Display for ApplicationStatus {
@@ -314,17 +286,13 @@ impl ApplicationStatus {
 /// PostgreSQL enum: invite_permission
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "invite_permission")]
+#[derive(Default)]
 pub enum InvitePermission {
     #[sea_orm(string_value = "view")]
+    #[default]
     View,
     #[sea_orm(string_value = "comment")]
     Comment,
-}
-
-impl Default for InvitePermission {
-    fn default() -> Self {
-        Self::View
-    }
 }
 
 /// PostgreSQL enum: flag_target_type
@@ -363,19 +331,15 @@ impl FlagTargetType {
 /// PostgreSQL enum: flag_status
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "flag_status")]
+#[derive(Default)]
 pub enum FlagStatus {
     #[sea_orm(string_value = "pending")]
+    #[default]
     Pending,
     #[sea_orm(string_value = "reviewed")]
     Reviewed,
     #[sea_orm(string_value = "dismissed")]
     Dismissed,
-}
-
-impl Default for FlagStatus {
-    fn default() -> Self {
-        Self::Pending
-    }
 }
 
 impl std::fmt::Display for FlagStatus {
@@ -467,8 +431,10 @@ impl NotificationKind {
 /// PostgreSQL enum: task_status
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "task_status")]
+#[derive(Default)]
 pub enum TaskStatus {
     #[sea_orm(string_value = "open")]
+    #[default]
     Open,
     #[sea_orm(string_value = "assigned")]
     Assigned,
@@ -476,12 +442,6 @@ pub enum TaskStatus {
     InReview,
     #[sea_orm(string_value = "done")]
     Done,
-}
-
-impl Default for TaskStatus {
-    fn default() -> Self {
-        Self::Open
-    }
 }
 
 impl std::fmt::Display for TaskStatus {
@@ -510,21 +470,17 @@ impl TaskStatus {
 /// PostgreSQL enum: task_priority
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "task_priority")]
+#[derive(Default)]
 pub enum TaskPriority {
     #[sea_orm(string_value = "low")]
     Low,
     #[sea_orm(string_value = "normal")]
+    #[default]
     Normal,
     #[sea_orm(string_value = "high")]
     High,
     #[sea_orm(string_value = "urgent")]
     Urgent,
-}
-
-impl Default for TaskPriority {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 impl std::fmt::Display for TaskPriority {

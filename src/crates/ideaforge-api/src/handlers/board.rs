@@ -286,7 +286,7 @@ async fn list_tasks(
             let total_pages = if total == 0 {
                 0
             } else {
-                (total + per_page - 1) / per_page
+                total.div_ceil(per_page)
             };
             Json(TaskListResponse {
                 data: tasks.iter().map(task_response).collect(),
@@ -548,15 +548,15 @@ async fn update_task(
     }
 
     // Validate title if provided
-    if let Some(ref t) = body.title {
-        if t.trim().is_empty() || t.len() > 255 {
-            return err(
-                StatusCode::BAD_REQUEST,
-                "VALIDATION_ERROR",
-                "Title must be 1-255 chars",
-            )
-            .into_response();
-        }
+    if let Some(ref t) = body.title
+        && (t.trim().is_empty() || t.len() > 255)
+    {
+        return err(
+            StatusCode::BAD_REQUEST,
+            "VALIDATION_ERROR",
+            "Title must be 1-255 chars",
+        )
+        .into_response();
     }
 
     // Validate priority if provided
