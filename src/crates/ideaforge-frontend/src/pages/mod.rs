@@ -11,3 +11,4 @@ pub mod people;
 pub mod notifications;
 pub mod messages;
 pub mod about;
+pub mod how_it_works;

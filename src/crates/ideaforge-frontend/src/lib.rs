@@ -21,6 +21,7 @@ use pages::create_idea::CreateIdeaPage;
 use pages::dashboard::DashboardPage;
 use pages::home::HomePage;
 use pages::about::AboutPage;
+use pages::how_it_works::HowItWorksPage;
 use pages::idea_detail::IdeaDetailPage;
 use pages::messages::MessagesPage;
 use pages::notifications::NotificationsPage;
@@ -96,6 +97,7 @@ fn ChromeAndRoutes() -> impl IntoView {
                 <Route path=path!("/notifications") view=NotificationsPage />
                 <Route path=path!("/messages") view=MessagesPage />
                 <Route path=path!("/about") view=AboutPage />
+                <Route path=path!("/how-it-works") view=HowItWorksPage />
             </Routes>
         </main>
         {move || (!is_fullscreen_route.get()).then(|| view! { <Footer /> })}

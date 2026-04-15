@@ -235,6 +235,11 @@ fn SetupForm(phase: RwSignal<Phase>, auth: AuthState, mls: MlsState) -> impl Int
                     {move || if working.get() { "Setting up…" } else { "Set PIN and enter" }}
                 </button>
             </form>
+            <p class="keystore-help">
+                <a href="/how-it-works" target="_blank" rel="noopener">
+                    "How private messaging works \u{2192}"
+                </a>
+            </p>
         </div>
     }
 }
@@ -332,6 +337,11 @@ fn UnlockForm(phase: RwSignal<Phase>, mls: MlsState) -> impl IntoView {
                     {move || if working.get() { "Unlocking…" } else { "Unlock" }}
                 </button>
             </form>
+            <p class="keystore-help">
+                <a href="/how-it-works" target="_blank" rel="noopener">
+                    "How private messaging works \u{2192}"
+                </a>
+            </p>
         </div>
     }
 }
@@ -348,6 +358,11 @@ fn LockedNotice(locked_until_ms: i64) -> impl IntoView {
                 "Too many failed PIN attempts. Your keystore is locked until "
                 {until_str}
                 ". This protects against someone trying to brute-force your PIN."
+            </p>
+            <p class="keystore-help">
+                <a href="/how-it-works" target="_blank" rel="noopener">
+                    "How private messaging works \u{2192}"
+                </a>
             </p>
         </div>
     }

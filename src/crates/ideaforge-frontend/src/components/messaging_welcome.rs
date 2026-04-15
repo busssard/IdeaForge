@@ -66,7 +66,7 @@ pub fn MessagingWelcome() -> impl IntoView {
                         </li>
                     </ul>
                     <div class="messaging-welcome-footer">
-                        <a href="/about" class="btn btn-secondary btn-sm">"How it works"</a>
+                        <a href="/how-it-works" class="btn btn-secondary btn-sm">"How it works"</a>
                         <button class="btn btn-primary btn-sm" on:click=dismiss>
                             "Got it"
                         </button>
