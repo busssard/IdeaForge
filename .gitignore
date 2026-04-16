@@ -33,11 +33,12 @@ Thumbs.db
 dist/
 
 # Local planning / scratch notes (not committed)
-planning/
+planning_local/
 
 # Local-only: never commit any of these (purged from history on 2026-04-16).
-# Keep your working copies under .local/ — it stays on your machine.
-.local/
+# Keep your working copies under _local/ — it stays on your machine.
+_local/
+deliverables_local/
 .purge-paths.txt
 
 # Claude Code + personal memory
@@ -53,8 +54,7 @@ IdeaForge_Investor_Feedback.docx
 scratch_pad.sh
 1..md
 
-# Unfinished deliverables & local dev scripts
-deliverables/
+# Local dev scripts
 scripts/
 
 # Session-local workflow files
@@ -62,7 +62,7 @@ tasks.md
 bugs.md
 ideaforge_sketch.md
 
-# Non-technical docs (kept local under .local/docs/)
+# Non-technical docs (kept local under _local/docs/)
 docs/business/
 docs/design/
 docs/research/
