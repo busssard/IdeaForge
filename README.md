@@ -199,8 +199,6 @@ The full runbook — systemd unit with resource caps, nginx config with SPA fall
 
 - **Architecture**: [`docs/architecture/`](docs/architecture/) — system overview, database schema, API design, ADRs.
 - **Security**: [`docs/security/`](docs/security/) — security framework, IP protection, bot transparency policy.
-- **Business**: [`docs/business/`](docs/business/) — market positioning, pricing, go-to-market.
-- **Design**: [`docs/design/`](docs/design/) — design language, component library, UX patterns.
 - **Deployment**: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — self-hosted production deploy.
 
 ## License

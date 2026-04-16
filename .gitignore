@@ -61,3 +61,10 @@ scripts/
 tasks.md
 bugs.md
 ideaforge_sketch.md
+
+# Non-technical docs (kept local under .local/docs/)
+docs/business/
+docs/design/
+docs/research/
+docs/ideaforge_vision_infographic.png
+docs/ideaforge_vision_infographic.svg
